@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-color: #0b1120; /* Deep Space Dark */
+        color: #f8fafc;
+    }
+    
+    /* Scrollbar for dark theme */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0b1120; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 100px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+}
+
+@layer components {
+    /* ── Dark Premium Sidebar ── */
+    .bob-sidebar {
+        @apply fixed left-0 top-0 h-screen w-[260px] z-40 flex flex-col;
+        background-color: #10162a; /* Slightly lighter than background */
+        border-right: 1px solid rgba(255,255,255,0.05);
+    }
+    .bob-sidebar-brand {
+        @apply flex items-center gap-3 px-6 h-[80px] shrink-0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .bob-sidebar-section-label {
+        @apply px-6 pt-6 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500;
+    }
+    .bob-sidebar-nav-item {
+        @apply flex items-center gap-3 px-4 py-2.5 mx-4 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer text-slate-400;
+    }
+    .bob-sidebar-nav-item:hover {
+        background: rgba(255,255,255,0.03);
+        color: #f8fafc;
+    }
+    .bob-sidebar-nav-item.active {
+        background: rgba(255,255,255,0.05);
+        color: #ffffff;
+        box-shadow: inset 3px 0 0 #818cf8; /* Subtle indigo accent */
+    }
+
+    /* ── Main Area ── */
+    .bob-main {
+        @apply ml-[260px] min-h-screen flex flex-col;
+        background-color: #0b1120;
+    }
+    .bob-topbar {
+        @apply sticky top-0 z-30 h-[80px] flex items-center justify-between px-8 border-b;
+        background: rgba(11, 17, 32, 0.85);
+        backdrop-filter: blur(16px);
+        border-color: rgba(255,255,255,0.05);
+    }
+
+    /* ── Glowing Dark Metric Cards ── */
+    .bob-metric-card {
+        @apply relative rounded-2xl p-6 overflow-hidden transition-all duration-300;
+        background-color: #111827; 
+        border: 1px solid rgba(255,255,255,0.04);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5);
+    }
+    .bob-metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+        border-color: rgba(255,255,255,0.1);
+    }
+
+    /* Gradient Background Maps for Cards */
+    .bob-metric-amber {
+        background: linear-gradient(135deg, rgba(245,158,11,0.15) 0%, #111827 60%);
+    }
+    .bob-metric-rose {
+        background: linear-gradient(135deg, rgba(225,29,72,0.15) 0%, #111827 60%);
+    }
+    .bob-metric-emerald {
+        background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, #111827 60%);
+    }
+    .bob-metric-indigo {
+        background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, #111827 60%);
+    }
+
+    /* ── Shared Glass Panels ── */
+    .bob-glass-panel {
+        @apply rounded-2xl overflow-hidden;
+        background-color: #111827;
+        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    }
+
+    /* ── Custom Dark Form Elements ── */
+    .bob-toolbar {
+        @apply flex flex-col sm:flex-row justify-between items-center bg-transparent gap-4 mb-6;
+    }
+    .bob-search-input {
+        @apply w-full sm:w-80 pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #f8fafc;
+    }
+    .bob-search-input::placeholder { color: #64748b; }
+    .bob-search-input:focus {
+        background: rgba(0,0,0,0.2);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    
+    .bob-select {
+        @apply py-2.5 px-4 rounded-xl text-sm font-semibold cursor-pointer outline-none transition-all duration-200;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #e2e8f0;
+    }
+    .bob-select:hover { background: rgba(255,255,255,0.05); }
+    .bob-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .bob-select option { background-color: #1e293b; color: #f8fafc; }
+
+    /* ── Premium Buttons ── */
+    .bob-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 shadow-lg;
+        background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .bob-btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        background: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%);
+    }
+    .bob-btn-ghost {
+        @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-300;
+        background: transparent;
+    }
+    .bob-btn-ghost:hover {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+    }
+
+    /* ── Status Badges ── */
+    .bob-badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-widest uppercase;
+    }
+    .bob-badge-pending  { background: rgba(245,158,11,0.1); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+    .bob-badge-matched  { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+    .bob-badge-flagged  { background: rgba(225,29,72,0.1); color: #fb7185; border: 1px solid rgba(225,29,72,0.2); }
+    .bob-badge-resolved { background: rgba(99,102,241,0.1); color: #818cf8; border: 1px solid rgba(99,102,241,0.2); }
+
+    /* ── AG Grid Dark Theme ── */
+    .ag-theme-alpine, .ag-theme-bob {
+        --ag-background-color: transparent !important;
+        --ag-header-background-color: transparent !important;
+        --ag-odd-row-background-color: rgba(255,255,255,0.01) !important;
+        --ag-row-hover-color: rgba(255,255,255,0.03) !important;
+        --ag-selected-row-background-color: rgba(99,102,241,0.1) !important;
+        --ag-border-color: rgba(255,255,255,0.05) !important;
+        --ag-header-foreground-color: #64748b !important;
+        --ag-foreground-color: #cbd5e1 !important;
+        --ag-secondary-foreground-color: #94a3b8 !important;
+        --ag-row-border-color: rgba(255,255,255,0.05) !important;
+        --ag-font-family: 'Inter', sans-serif !important;
+        --ag-font-size: 13px !important;
+        --ag-header-height: 48px !important;
+    }
+    .ag-header-cell-label { text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+    
+    /* ── Custom Tables ── */
+    .bob-table { @apply w-full text-left border-collapse; }
+    .bob-table th { @apply px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-slate-500 border-b border-white/5; }
+    .bob-table td { @apply px-6 py-4 border-b border-white/5 text-sm font-medium text-slate-300; }
+    .bob-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── Form Inputs ── */
+    .bob-form-label { @apply block text-xs font-bold uppercase tracking-wide text-slate-400 mb-2; }
+    .bob-form-input {
+        @apply w-full outline-none transition-all rounded-xl px-4 py-3 bg-[#0b1120] border border-white/10 text-white text-sm shadow-inner;
+    }
+    .bob-form-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    
+    /* ── Upload Dropzone ── */
+    .bob-dropzone {
+        @apply flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300;
+        border-color: rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.02);
+    }
+    .bob-dropzone:hover {
+        border-color: #6366f1;
+        background: rgba(99,102,241,0.05);
+    }
+}
