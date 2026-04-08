@@ -1,25 +1,35 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
-    </div>
+    <h1 class="auth-title">Reset Password</h1>
+    <p class="auth-subtitle">Enter your work email and we will send a secure reset link to restore account access.</p>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <div class="auth-status">{{ session('status') }}</div>
+    @endif
 
-    <form method="POST" action="{{ route('password.email') }}">
+    <form method="POST" action="{{ route('password.email') }}" class="auth-form" novalidate>
         @csrf
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <div class="auth-field">
+            <label for="email" class="auth-label">Work Email</label>
+            <input id="email"
+                   class="auth-input"
+                   type="email"
+                   name="email"
+                   value="{{ old('email') }}"
+                   placeholder="you@company.com"
+                   required
+                   autofocus
+                   autocomplete="username">
+            @error('email')
+                <p class="auth-error">{{ $message }}</p>
+            @enderror
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="auth-submit">Send Reset Link</button>
     </form>
+
+    <p class="auth-footnote">
+        Remembered your password?
+        <a href="{{ route('login') }}" class="auth-link">Back to sign in</a>
+    </p>
 </x-guest-layout>

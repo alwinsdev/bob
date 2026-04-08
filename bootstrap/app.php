@@ -11,7 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Spatie Laravel Permission middleware aliases
+        // These enable ->middleware('permission:some.permission') and ->middleware('role:some_role')
+        // on any route without needing to reference the full class path each time.
+        $middleware->alias([
+            'role'               => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'         => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

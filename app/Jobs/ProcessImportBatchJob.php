@@ -19,21 +19,41 @@ class ProcessImportBatchJob implements ShouldQueue
     public $timeout = 3600; // 1 hr max
 
     public function __construct(
-        public ImportBatch $batch,
-        public string $filePath
+        public ImportBatch $batch
     ) {}
 
     public function handle(ReconciliationETLService $etlService): void
     {
-        if ($this->batch && $this->batch()->cancelled()) {
+        $jobBatch = $this->batch();
+
+        if ($jobBatch && $jobBatch->cancelled()) {
             return; // In case we use bus::batch
         }
 
         try {
-            $etlService->processFile($this->filePath, $this->batch);
-        } catch (\Exception $e) {
+            $etlService->processBatch($this->batch);
+        } catch (\Throwable $e) {
             Log::error("Failed to process batch {$this->batch->id}: " . $e->getMessage());
             $this->fail($e);
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        $message = $exception->getMessage();
+        $isUserDomainError = str_starts_with($message, 'Invalid Format:') || str_starts_with($message, 'Missing Required');
+        $userFriendlyMessage = $isUserDomainError 
+            ? $message 
+            : 'A system error occurred during ETL processing. Please try again or contact support if the issue persists.';
+
+        $this->batch->update([
+            'status'        => 'failed',
+            'error_message' => $userFriendlyMessage,
+        ]);
+        
+        Log::error("[Enterprise] Batch Job Hard Failed: ID {$this->batch->id}. Error: " . $exception->getMessage());
     }
 }

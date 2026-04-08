@@ -5,7 +5,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'BOB System') }}</title>
+        
+        {{-- Custom SVG Favicon --}}
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%236366f1'/%3E%3Cpath fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' d='M29.375 35A5.625 5.625 0 0 1 35 29.375h5.625A5.625 5.625 0 0 1 46.25 35v5.625a5.625 5.625 0 0 1-5.625 5.625H35A5.625 5.625 0 0 1 29.375 40.625V35zM29.375 59.375A5.625 5.625 0 0 1 35 53.75h5.625A5.625 5.625 0 0 1 46.25 59.375V65a5.625 5.625 0 0 1-5.625 5.625H35A5.625 5.625 0 0 1 29.375 65v-5.625zM53.75 35A5.625 5.625 0 0 1 59.375 29.375H65A5.625 5.625 0 0 1 70.625 35v5.625a5.625 5.625 0 0 1-5.625 5.625h-5.625A5.625 5.625 0 0 1 53.75 40.625V35zM53.75 59.375A5.625 5.625 0 0 1 59.375 53.75H65A5.625 5.625 0 0 1 70.625 59.375V65A5.625 5.625 0 0 1 65 70.625h-5.625A5.625 5.625 0 0 1 53.75 65v-5.625z'/%3E%3C/svg%3E">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

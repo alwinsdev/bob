@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('import_batches', function (Blueprint $table) {
+            $table->json('skipped_summary')->nullable()->after('skipped_records')->comment('Aggregated counts of skip reasons');
+            $table->json('failure_summary')->nullable()->after('skipped_summary')->comment('Aggregated counts of failure reasons');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('import_batches', function (Blueprint $table) {
+            $table->dropColumn(['skipped_summary', 'failure_summary']);
+        });
+    }
+};

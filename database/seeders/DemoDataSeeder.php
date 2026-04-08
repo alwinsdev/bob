@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\ImportBatch;
 use App\Models\ReconciliationQueue;
+use App\Models\ReconciliationAuditLog;
 use App\Models\Agent;
 use App\Models\User;
 use Faker\Factory as Faker;
@@ -20,9 +21,10 @@ class DemoDataSeeder extends Seeder
         
         // 1. Create a dummy Import Batch
         $batch = ImportBatch::create([
-            'file_name' => 'demo/Bob_Export_CarrierA.csv',
-            'original_name' => 'Bob_Export_CarrierA.csv',
-            'type' => 'carrier',
+            'carrier_file_path' => 'demo/Bob_Export_CarrierA.csv',
+            'carrier_original_name' => 'Bob_Export_CarrierA.csv',
+            'ims_file_path' => 'demo/IMS_Export_April.csv',
+            'ims_original_name' => 'IMS_Export_April.csv',
             'total_records' => 500,
             'processed_records' => 500,
             'failed_records' => 0,
@@ -41,6 +43,7 @@ class DemoDataSeeder extends Seeder
         $products = ['Medicare Advantage', 'Commercial HMO', 'Commercial PPO', 'Dental'];
         
         $recordsToInsert = [];
+        $auditLogsToInsert = [];
         
         for ($i = 0; $i < 500; $i++) {
             $isMatched = $faker->boolean(30); // 30% exactly matched
@@ -111,10 +114,31 @@ class DemoDataSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+
+            $transactionId = $recordsToInsert[$i]['transaction_id'];
+            if ($status === 'resolved' || $status === 'flagged') {
+                $auditLogsToInsert[] = [
+                    'id' => (string) Str::ulid(),
+                    'transaction_id' => $transactionId,
+                    'action' => $status,
+                    'previous_values' => null,
+                    'new_values' => null,
+                    'previous_agent_code' => null,
+                    'new_agent_code' => $status === 'resolved' ? $agent->agent_code : null,
+                    'modified_by_user_id' => $analyst?->id,
+                    'ip_address' => '127.0.0.1',
+                    'user_agent' => 'demo-seeder',
+                    'created_at' => now(),
+                ];
+            }
         }
 
         foreach (array_chunk($recordsToInsert, 100) as $chunk) {
             ReconciliationQueue::insert($chunk);
+        }
+
+        foreach (array_chunk($auditLogsToInsert, 200) as $chunk) {
+            ReconciliationAuditLog::insert($chunk);
         }
     }
 }

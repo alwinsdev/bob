@@ -21,6 +21,7 @@ class ReconciliationAuditLog extends Model
         'modified_by_user_id',
         'ip_address',
         'user_agent',
+        'notes',
     ];
 
     protected function casts(): array

@@ -7,6 +7,12 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        './resources/js/**/*.js',
+    ],
+
+    safelist: [
+        { pattern: /^bob-status-(pending|matched|flagged|resolved)$/ },
+        { pattern: /^bob-score-(high|mid|low)$/ },
     ],
 
     theme: {

@@ -1,107 +1,83 @@
 # BOB Reconciliation Hub
 
-Enterprise reconciliation platform built with Laravel for comparing carrier feed data against IMS records, routing exceptions to analysts, and preserving a full audit trail of decisions.
+Enterprise reconciliation platform built on Laravel for ingesting carrier/source feeds, running deterministic matching, enabling analyst interventions, and delivering auditable reporting outputs.
 
-## Contents
+## Documentation Hub
 
-- [Overview](#overview)
-- [Core Features](#core-features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Local Development](#local-development)
-- [Queue and Background Jobs](#queue-and-background-jobs)
-- [Seed Data and Demo Accounts](#seed-data-and-demo-accounts)
-- [Permissions and Access Control](#permissions-and-access-control)
-- [HTTP Routes](#http-routes)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Security Notes](#security-notes)
-- [License](#license)
+- [Developer Architecture Guide](docs/developer-architecture-guide.md)
+- [User Operations Guide](docs/user-operations-guide.md)
+- [Flow Diagrams](docs/flow-diagrams.md)
 
-## Overview
+Use these three documents as the primary reference set for onboarding, implementation, operations, and support.
 
-BOB Reconciliation Hub supports an operations workflow where users:
+## Platform Scope
 
-1. Upload carrier or IMS files.
-2. Process and normalize imported rows in background jobs.
-3. Run fuzzy matching to determine candidate alignment confidence.
-4. Resolve or flag exceptions from a reconciliation grid UI.
-5. Track every decision in audit logs.
+BOB Reconciliation Hub supports the full reconciliation lifecycle:
+- Standard synchronization uploads (Carrier with IMS and/or Health Sherpa, optional Payee)
+- Deterministic ETL matching and queue record generation
+- Analyst lock/resolve/flag workflows with audit logging
+- Lock list governance and policy override behavior
+- Contract patch runs for controlled mid-cycle adjustments
+- Reporting and exports (Final BOB, Locklist Impact, Contract Patch Ledger)
 
-The application includes role-based access control, record locking, partial failure handling for imports, and archival support for aged resolved records.
+## Architecture at a Glance
 
-## Core Features
+High-level flow:
+1. User uploads files from the Import Feeds screen.
+2. Import batch metadata is persisted and queue jobs are dispatched.
+3. ETL service builds lookup maps and processes rows in streaming mode.
+4. Reconciliation queue rows are created with match metadata and status.
+5. Analysts review records in the grid and perform lock/resolve/flag actions.
+6. Audit logs and patch logs preserve action traceability.
+7. Reporting controllers expose operational and commission-ready views.
+8. Scheduler handles lock expiry release and record archival.
 
-- Reconciliation workspace with AG Grid (server-side pagination, sorting, filtering).
-- File import flow with batch tracking (`pending`, `processing`, `completed`, `completed_with_errors`, `failed`).
-- Row-level import error capture in `import_row_errors`.
-- Fuzzy matching service against active IMS agents.
-- Record lock/unlock workflow to prevent concurrent analyst edits.
-- Single-record and bulk resolve actions with validation.
-- Flag workflow for exception escalation.
-- Audit trail in `reconciliation_audit_logs`.
-- Structured system error logging in `system_error_logs`.
-- Archival service for resolved records older than a threshold.
+For full diagrams, see [Flow Diagrams](docs/flow-diagrams.md).
 
-## Architecture
+## Core Modules
 
-High-level processing flow:
+- Controllers: [app/Http/Controllers/Reconciliation](app/Http/Controllers/Reconciliation)
+- Services: [app/Services](app/Services) and [app/Services/Reconciliation](app/Services/Reconciliation)
+- Jobs: [app/Jobs](app/Jobs)
+- Models: [app/Models](app/Models)
+- Policies: [app/Policies](app/Policies)
+- Requests: [app/Http/Requests](app/Http/Requests)
+- Views: [resources/views/reconciliation](resources/views/reconciliation)
+- Frontend scripts: [resources/js/reconciliation.js](resources/js/reconciliation.js), [resources/js/reconciliation-audit.js](resources/js/reconciliation-audit.js)
 
-```text
-Upload file -> import_batches row created -> ProcessImportBatchJob dispatched
--> ReconciliationETLService parses rows in chunks
--> transform + fuzzy match + insert reconciliation_queue
--> import_row_errors for failed rows
--> analyst reviews records in grid
--> lock -> resolve/flag -> audit log entries
-```
+Route map entrypoint:
+- [routes/web.php](routes/web.php)
 
-## Tech Stack
+Scheduler entrypoint:
+- [routes/console.php](routes/console.php)
 
-- Backend: Laravel 12, PHP 8.2+
-- Frontend: Blade, Alpine.js, Tailwind CSS, Vite
-- Grid: AG Grid Community (CDN)
-- File ingestion: Spatie SimpleExcel, Maatwebsite Excel
-- Authorization: spatie/laravel-permission
-- Queue backend: Laravel database queue driver
-- Database: SQLite by default (configurable)
+## Technology Stack
 
-## Project Structure
+- PHP 8.2+
+- Laravel 12
+- MySQL (default project database)
+- Blade + Alpine.js + Tailwind + Vite
+- AG Grid (reconciliation/reporting grid surfaces)
+- Spatie Permission (RBAC)
+- Spatie Simple Excel + Laravel Excel (imports/exports)
+- DomPDF (PDF exports)
 
-```text
-app/
-	Http/
-		Controllers/Reconciliation/
-		Requests/
-	Jobs/
-	Models/
-	Policies/
-	Services/
-database/
-	migrations/
-	seeders/
-resources/
-	views/reconciliation/
-	js/reconciliation.js
-	css/app.css
-routes/
-	web.php
-	auth.php
-```
+Dependency manifests:
+- [composer.json](composer.json)
+- [package.json](package.json)
 
-## Requirements
+## Getting Started
 
-- PHP 8.2 or newer
+### Prerequisites
+
+- PHP 8.2+
 - Composer
 - Node.js 18+ and npm
-- A supported database (SQLite default, MySQL/PostgreSQL optional)
+- MySQL server
 
-## Quick Start
+### Install and Bootstrap
 
-From repository root:
+Run from project root:
 
 ```bash
 composer install
@@ -113,46 +89,22 @@ npm install
 npm run build
 ```
 
-Or run the project bootstrap script defined in `composer.json`:
+Or use the setup script:
 
 ```bash
 composer run setup
 php artisan db:seed
 ```
 
-Then run app + worker (separate terminals):
+### Run Locally
 
-```bash
-php artisan serve
-php artisan queue:work
-```
-
-Open: `http://127.0.0.1:8000`
-
-Health check endpoint: `GET /up`
-
-Windows PowerShell copy command alternative:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-## Local Development
-
-Use the bundled concurrent development script:
+Single command development stack:
 
 ```bash
 composer dev
 ```
 
-This starts:
-
-- Laravel server
-- Queue listener
-- Laravel pail logs
-- Vite dev server
-
-Or run individually:
+Manual terminals:
 
 ```bash
 php artisan serve
@@ -160,64 +112,31 @@ php artisan queue:listen --tries=1 --timeout=0
 npm run dev
 ```
 
-## Queue and Background Jobs
+### Scheduler
 
-Queue connection defaults to `database` (see `config/queue.php` and `.env.example`).
+In development, run scheduler loop when validating maintenance behavior:
 
-Important jobs:
+```bash
+php artisan schedule:work
+```
 
-- `ProcessImportBatchJob`: entrypoint for file processing
-- `ReleaseExpiredLocksJob`: clears stale record locks
-- `ArchiveResolvedRecordsJob`: archives aged resolved records
+Scheduled actions are defined in [routes/console.php](routes/console.php):
+- release expired locks every 30 minutes
+- archive resolved records daily at 01:00
 
-If queue workers are not running, uploads remain in pending/processing states.
+## Authorization and Access
 
-Note: lock-release and archival jobs exist, but no scheduler entries are registered in `routes/console.php` yet. Trigger those jobs manually or add scheduler registrations if you want automatic execution.
+Permission keys and role setup are seeded by:
+- [database/seeders/RolesAndPermissionsSeeder.php](database/seeders/RolesAndPermissionsSeeder.php)
 
-## Seed Data and Demo Accounts
+Policy classes:
+- [app/Policies/ImportBatchPolicy.php](app/Policies/ImportBatchPolicy.php)
+- [app/Policies/ReconciliationQueuePolicy.php](app/Policies/ReconciliationQueuePolicy.php)
+- [app/Policies/LockListPolicy.php](app/Policies/LockListPolicy.php)
+- [app/Policies/ContractPatchPolicy.php](app/Policies/ContractPatchPolicy.php)
 
-`DatabaseSeeder` runs:
-
-- `RolesAndPermissionsSeeder`
-- `AgentSeeder`
-- `DemoDataSeeder`
-
-Demo users created by seeder:
-
-- Analyst: `analyst@bob.test` / `password`
-- Manager: `manager@bob.test` / `password`
-
-## Permissions and Access Control
-
-Permissions configured through Spatie package:
-
-- `reconciliation.view`
-- `reconciliation.edit`
-- `reconciliation.bulk_approve`
-- `import.upload`
-
-Default roles:
-
-- `Reconciliation_Analyst`
-- `Manager`
-
-Policies enforce access for upload, view, lock, resolve, and bulk actions.
-
-## HTTP Routes
-
-Primary authenticated routes (`routes/web.php`):
-
-- `GET /reconciliation` -> dashboard page
-- `GET /reconciliation/data` -> grid data JSON
-- `GET /reconciliation/upload` -> upload UI
-- `POST /reconciliation/upload` -> submit import
-- `POST /reconciliation/records/{record}/lock`
-- `POST /reconciliation/records/{record}/unlock`
-- `POST /reconciliation/records/{record}/resolve`
-- `POST /reconciliation/records/{record}/flag`
-- `POST /reconciliation/records/bulk-resolve`
-
-Auth routes are provided via Laravel Breeze defaults (`routes/auth.php`).
+Gate bootstrap:
+- [app/Providers/AppServiceProvider.php](app/Providers/AppServiceProvider.php)
 
 ## Testing
 
@@ -227,27 +146,33 @@ Run tests:
 php artisan test
 ```
 
-`phpunit.xml` is configured to run with in-memory SQLite for tests.
+Current PHPUnit environment profile:
+- DB_CONNECTION = mysql
+- DB_DATABASE = bob_test
 
-## Troubleshooting
+Reference file:
+- [phpunit.xml](phpunit.xml)
 
-- Import not progressing:
-	- Ensure queue worker is running (`php artisan queue:work`).
-- Unauthorized (403) on actions:
-	- Verify user role/permissions from Spatie permission tables.
-- Empty reconciliation grid on fresh setup:
-	- Run `php artisan db:seed` to load demo data.
-- Frontend changes not visible:
-	- Run `npm run dev` for HMR or `npm run build` for production assets.
+## Operational Notes
 
-## Security Notes
+- Queue worker must be running for batch processing.
+- Upload and patch runs are asynchronous and status-driven.
+- Reconciliation and patch actions are auditable.
+- User preferences (theme, export format, page size) are persisted per user.
 
-- PII fields are encrypted at rest via model casts:
-	- `member_dob`
-	- `member_phone`
-- Reconciliation actions are permission-gated and audited.
-- System-level errors are persisted in `system_error_logs` and application logs.
+## Troubleshooting Quick Checks
+
+- Stuck batch: verify queue worker, batch status, and failed jobs.
+- No matches: verify input headers, required identifiers, and source file presence.
+- 403 errors: verify assigned permissions and role cache state.
+- Missing downloads: confirm output file exists and export permission is granted.
+
+## Additional References
+
+- [Developer Architecture Guide](docs/developer-architecture-guide.md)
+- [User Operations Guide](docs/user-operations-guide.md)
+- [Flow Diagrams](docs/flow-diagrams.md)
 
 ## License
 
-This project is distributed under the MIT License unless your organization policy defines otherwise.
+This repository follows the project licensing policy defined by your organization.

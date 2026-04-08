@@ -7,7 +7,8 @@ export default defineConfig({
             input: [
                 'resources/css/app.css', 
                 'resources/js/app.js',
-                'resources/js/reconciliation.js'
+                'resources/js/reconciliation.js',
+                'resources/js/reconciliation-audit.js'
             ],
             refresh: true,
         }),
