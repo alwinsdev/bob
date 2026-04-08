@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Reconciliation;
 
 use App\Http\Controllers\Controller;
-use App\Models\ReconciliationAuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AuditLogController extends Controller
 {
@@ -15,7 +15,7 @@ class AuditLogController extends Controller
     {
         return view('reconciliation.audit-logs', [
             'pageTitle' => 'System Audit Logs',
-            'pageSubtitle' => 'Monitor the trail of interventions, resolutions, and system changes'
+            'pageSubtitle' => 'Monitor the trail of interventions, resolutions, and system changes',
         ]);
     }
 
@@ -24,7 +24,7 @@ class AuditLogController extends Controller
      */
     public function data(Request $request)
     {
-        $auditLogs = \Illuminate\Support\Facades\DB::table('reconciliation_audit_logs')
+        $auditLogs = DB::table('reconciliation_audit_logs')
             ->leftJoin('users', 'reconciliation_audit_logs.modified_by_user_id', '=', 'users.id')
             ->select([
                 'reconciliation_audit_logs.id',
@@ -36,10 +36,10 @@ class AuditLogController extends Controller
                 'users.name as user_name',
                 'users.email as user_email',
                 'reconciliation_audit_logs.created_at',
-                'reconciliation_audit_logs.notes'
+                'reconciliation_audit_logs.notes',
             ]);
 
-        $patchLogs = \Illuminate\Support\Facades\DB::table('contract_patch_logs')
+        $patchLogs = DB::table('contract_patch_logs')
             ->leftJoin('users', 'contract_patch_logs.updated_by', '=', 'users.id')
             ->select([
                 'contract_patch_logs.id',
@@ -51,10 +51,10 @@ class AuditLogController extends Controller
                 'users.name as user_name',
                 'users.email as user_email',
                 'contract_patch_logs.created_at',
-                \Illuminate\Support\Facades\DB::raw("'Contract patched via automated engine' as notes")
+                DB::raw("'Contract patched via automated engine' as notes"),
             ]);
 
-        $query = \Illuminate\Support\Facades\DB::table(\Illuminate\Support\Facades\DB::raw("({$auditLogs->toSql()} UNION {$patchLogs->toSql()}) as combined_logs"))
+        $query = DB::table(DB::raw("({$auditLogs->toSql()} UNION {$patchLogs->toSql()}) as combined_logs"))
             ->mergeBindings($auditLogs)
             ->mergeBindings($patchLogs);
 
@@ -69,11 +69,11 @@ class AuditLogController extends Controller
             $query->where('action', $request->actionType);
         }
 
-        if ($request->has('search') && !empty($request->search)) {
+        if ($request->has('search') && ! empty($request->search)) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('transaction_id', 'like', "%{$search}%")
-                  ->orWhere('user_name', 'like', "%{$search}%");
+                    ->orWhere('user_name', 'like', "%{$search}%");
             });
         }
 
@@ -85,7 +85,7 @@ class AuditLogController extends Controller
             }
         }
 
-        if (!empty($sortModel)) {
+        if (! empty($sortModel)) {
             foreach ($sortModel as $sort) {
                 $colId = $sort['colId'] ?? null;
                 $field = $allowedSortFields[$colId] ?? null;
@@ -98,8 +98,8 @@ class AuditLogController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $perPage = $request->input('limit', 50);
-        $page = $request->input('page', 1);
+        $perPage = max(1, min((int) $request->integer('limit', 50), 250));
+        $page = max(1, (int) $request->integer('page', 1));
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
@@ -118,7 +118,7 @@ class AuditLogController extends Controller
                     'id' => $item->modified_by_user_id,
                     'name' => $item->user_name,
                     'email' => $item->user_email,
-                ]
+                ],
             ];
         });
 

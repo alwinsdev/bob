@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers\Reconciliation;
 
-use App\Http\Controllers\Controller;
-use App\Models\ReconciliationQueue;
-use App\Models\ImportBatch;
 use App\Exports\ReconciliationExport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Http\Controllers\Controller;
+use App\Models\ImportBatch;
+use App\Models\ReconciliationQueue;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-
 
 class DashboardController extends Controller
 {
@@ -30,7 +28,7 @@ class DashboardController extends Controller
     {
         $query = $this->buildQuery($request);
 
-        $perPage = $request->input('per_page', 50);
+        $perPage = max(1, min((int) $request->integer('per_page', 50), 250));
         $paginator = $query->paginate($perPage);
 
         $rows = $paginator->getCollection()->map(function (ReconciliationQueue $record) {
@@ -66,7 +64,7 @@ class DashboardController extends Controller
             'data' => $rows,
             'total' => $paginator->total(),
             'current_page' => $paginator->currentPage(),
-            'last_page' => $paginator->lastPage()
+            'last_page' => $paginator->lastPage(),
         ]);
     }
 
@@ -78,27 +76,27 @@ class DashboardController extends Controller
         $user = $request->user();
         $prefs = $user->preferences ?? [];
         $format = $prefs['export_format'] ?? 'xlsx';
-        
+
         $status = $request->input('status', 'all');
         $search = $request->input('search');
-        
-        $fileName = 'Reconciliation_Hub_' . now()->format('Ymd_His');
+
+        $fileName = 'Reconciliation_Hub_'.now()->format('Ymd_His');
 
         if ($format === 'pdf') {
             $records = $this->buildQuery($request)->get();
             $pdf = Pdf::loadView('reports.reconciliation-pdf', [
                 'records' => $records,
                 'status' => $status,
-                'search' => $search
+                'search' => $search,
             ])->setPaper('a4', 'landscape');
-            
-            return $pdf->download($fileName . '.pdf');
+
+            return $pdf->download($fileName.'.pdf');
         }
 
         $export = new ReconciliationExport($status, $search);
         $ext = in_array($format, ['xlsx', 'csv']) ? $format : 'xlsx';
-        
-        return $export->download($fileName . '.' . $ext);
+
+        return $export->download($fileName.'.'.$ext);
     }
 
     /**
@@ -136,23 +134,22 @@ class DashboardController extends Controller
 
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('contract_id', 'like', "%{$search}%")
-                  ->orWhere('member_first_name', 'like', "%{$search}%")
-                  ->orWhere('member_last_name', 'like', "%{$search}%")
-                  ->orWhere('carrier', 'like', "%{$search}%")
-                  ->orWhere('ims_transaction_id', 'like', "%{$search}%");
+                    ->orWhere('member_first_name', 'like', "%{$search}%")
+                    ->orWhere('member_last_name', 'like', "%{$search}%")
+                    ->orWhere('carrier', 'like', "%{$search}%")
+                    ->orWhere('ims_transaction_id', 'like', "%{$search}%");
             });
         }
 
         $allowedSorts = [
-            'created_at', 'contract_id', 'member_first_name', 'member_last_name', 
-            'carrier', 'ims_transaction_id', 'status', 'match_confidence'
+            'created_at', 'contract_id', 'member_first_name', 'member_last_name',
+            'carrier', 'ims_transaction_id', 'status', 'match_confidence',
         ];
         $sortCol = in_array($request->input('sort_by'), $allowedSorts) ? $request->input('sort_by') : 'created_at';
         $sortDir = strtolower($request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
-        
+
         return $query->orderBy($sortCol, $sortDir);
     }
 }
-

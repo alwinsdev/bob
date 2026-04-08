@@ -27,4 +27,17 @@ Thumbs.db
 
 /bob
 /implementation_plan.md
-/tests
+/tests/*
+!/tests/TestCase.php
+!/tests/Support/
+/tests/Support/*
+!/tests/Support/StableFilesystem.php
+!/tests/Unit/
+/tests/Unit/*
+!/tests/Unit/Reconciliation/
+/tests/Unit/Reconciliation/*
+!/tests/Unit/Reconciliation/ETL/
+/tests/Unit/Reconciliation/ETL/*
+!/tests/Unit/Reconciliation/ETL/ReconciliationRecordResolverTest.php
+!/tests/Unit/Reconciliation/ETL/ReconciliationValueNormalizerTest.php
+.codex/
