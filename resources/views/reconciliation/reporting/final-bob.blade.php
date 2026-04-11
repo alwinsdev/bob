@@ -7,7 +7,7 @@
         <a href="{{ route('reconciliation.reporting.final-bob') }}" class="bob-btn-primary text-xs">View Final BOB</a>
         <a href="{{ route('reconciliation.reporting.contract-patches') }}" class="bob-btn-ghost text-xs">Commission Adjustments</a>
         @can('reconciliation.export.download')
-        <a :href="`{{ route('reconciliation.reporting.final-bob.export') }}?search=${encodeURIComponent(searchQuery || '')}`" class="bob-btn-primary group">
+        <a :href="finalBobExportUrl()" class="bob-btn-primary group">
 
             <svg class="w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -89,7 +89,7 @@
                         Refresh Data
                     </button>
                     <div class="h-9 w-[1px] bg-slate-700/50 mx-1"></div>
-                    <button class="bob-btn-ghost flex items-center gap-2" @click="gridApi.setGridOption('quickFilterText', '')">
+                    <button class="bob-btn-ghost flex items-center gap-2" @click="clearSearch">
                         <span class="text-xs font-bold uppercase tracking-tight">Clear Filters</span>
                     </button>
                 </div>
@@ -117,13 +117,12 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('finalBobReporting', () => ({
                 gridApi: null,
-
-                gridApi: null,
+                gridOptions: null,
                 metrics: { total: 0, override: 0 },
                 searchQuery: '',
+                batchId: new URLSearchParams(window.location.search).get('batch_id') || '',
 
                 init() {
-
                     this.initGrid();
                 },
 
@@ -144,12 +143,26 @@
                         return `<span title="Overridden by Lock List" style="background:rgba(168,85,247,0.12);color:#c084fc;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:800;border:1px solid rgba(168,85,247,0.2);display:inline-flex;align-items:center;gap:4px;letter-spacing:0.02em;">LOCKED</span>`;
                     }
                     if (m.startsWith('ims')) {
+                        const sub = this.escapeHtml(String(method || '').split(':')[1] || '');
                         return `<span style="background:rgba(99,102,241,0.1);color:#818cf8;padding:4px 10px;border-radius:8px;font-size:9px;font-weight:700;letter-spacing:0.05em;border:1px solid rgba(99,102,241,0.15);">IMS MATCH</span>`;
                     }
                     if (m.startsWith('health sherpa') || m.startsWith('hs')) {
                         return `<span style="background:rgba(16,185,129,0.1);color:#10b981;padding:4px 10px;border-radius:8px;font-size:9px;font-weight:700;letter-spacing:0.05em;border:1px solid rgba(16,185,129,0.15);">HS MATCH</span>`;
                     }
                     return `<span style="font-size:9px;font-weight:700;color:var(--bob-text-faint);text-transform:uppercase;letter-spacing:0.05em">${ms || 'Manual'}</span>`;
+                },
+
+                updateMetrics(metrics) {
+                    this.metrics.total = Number(metrics.total || 0);
+                    this.metrics.override = Number(metrics.override_count || 0);
+
+                    const overrideRate = this.metrics.total > 0
+                        ? ((this.metrics.override / this.metrics.total) * 100).toFixed(1)
+                        : '0.0';
+
+                    document.getElementById('stat-total').innerText = this.metrics.total.toLocaleString();
+                    document.getElementById('stat-impact').innerText = this.metrics.override.toLocaleString();
+                    document.getElementById('stat-override-rate').innerText = `${overrideRate}%`;
                 },
 
                 initGrid() {
@@ -181,19 +194,21 @@
                           cellRenderer: p => p.value ? `<span class="text-purple-400 font-black text-[10px] uppercase tracking-widest">Yes</span>` : `<span class="text-slate-600 text-[10px] uppercase font-bold tracking-widest">No</span>` }
                     ];
 
-                    const gridOptions = {
+                    this.gridOptions = {
                         columnDefs: colDefs,
-                        rowModelType: 'clientSide',
+                        rowModelType: 'infinite',
                         rowHeight: 56,
                         headerHeight: 52,
                         pagination: true,
                         paginationPageSize: 100,
+                        cacheBlockSize: 100,
+                        maxBlocksInCache: 10,
                         suppressCellFocus: true,
                         enableCellTextSelection: true,
                         animateRows: true,
                         defaultColDef: {
                             sortable: true,
-                            filter: true,
+                            filter: false,
                             resizable: true,
                         },
                         overlayLoadingTemplate: '<div class="ag-custom-loading"><div class="w-10 h-10 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin"></div></div>',
@@ -201,49 +216,112 @@
                     };
 
                     const gridDiv = document.querySelector('#finalBobGrid');
-                    this.gridApi = agGrid.createGrid(gridDiv, gridOptions);
-                    this.loadData();
+                    this.gridApi = agGrid.createGrid(gridDiv, this.gridOptions);
+                    this.setGridDataSource();
                 },
 
-                async loadData() {
-                    this.gridApi.showLoadingOverlay();
-                    try {
-                        const params = new URLSearchParams(window.location.search);
-                        const query = params.toString();
-                        const dataUrl = query
-                            ? `{{ route('reconciliation.reporting.final-bob.data') }}?${query}`
-                            : '{{ route('reconciliation.reporting.final-bob.data') }}';
+                setGridDataSource() {
+                    const pageSize = this.gridOptions?.cacheBlockSize || 100;
+                    const datasource = {
+                        getRows: async (params) => {
+                            const startRow = params.startRow ?? 0;
+                            const page = Math.floor(startRow / pageSize) + 1;
+                            const url = new URL('{{ route('reconciliation.reporting.final-bob.data') }}');
 
-                        const res = await fetch(dataUrl);
-                        const data = await res.json();
-                        this.gridApi.setGridOption('rowData', data);
-                        
-                        // Update simple metrics
-                        this.metrics.total = data.length;
-                        this.metrics.override = data.filter(d => d.override_flag).length;
-                        const overrideRate = this.metrics.total > 0
-                            ? ((this.metrics.override / this.metrics.total) * 100).toFixed(1)
-                            : '0.0';
-                        
-                        document.getElementById('stat-total').innerText = this.metrics.total.toLocaleString();
-                        document.getElementById('stat-impact').innerText = this.metrics.override.toLocaleString();
-                        document.getElementById('stat-override-rate').innerText = `${overrideRate}%`;
-                    } catch (err) {
-                        console.error('Grid load error:', err);
-                        this.gridApi.showNoRowsOverlay();
+                            if (this.batchId) {
+                                url.searchParams.set('batch_id', this.batchId);
+                            }
+
+                            if (this.searchQuery) {
+                                url.searchParams.set('search', this.searchQuery);
+                            }
+
+                            url.searchParams.set('page', page);
+                            url.searchParams.set('limit', pageSize);
+                            url.searchParams.set('sortModel', JSON.stringify(params.sortModel || []));
+
+                            try {
+                                const res = await fetch(url);
+                                if (!res.ok) {
+                                    throw new Error('Failed to load Final BOB data');
+                                }
+
+                                const payload = await res.json();
+                                const rows = payload.data || [];
+                                const total = Number(payload.total || 0);
+                                const endRow = startRow + rows.length;
+                                const lastRow = endRow >= total ? total : -1;
+
+                                this.updateMetrics(payload.metrics || { total, override_count: 0 });
+
+                                if (typeof params.successCallback === 'function') {
+                                    params.successCallback(rows, lastRow);
+                                    return;
+                                }
+
+                                if (typeof params.success === 'function') {
+                                    params.success({ rowData: rows, rowCount: total });
+                                }
+                            } catch (err) {
+                                console.error('Grid load error:', err);
+                                this.updateMetrics({ total: 0, override_count: 0 });
+
+                                if (typeof params.failCallback === 'function') {
+                                    params.failCallback();
+                                    return;
+                                }
+
+                                if (typeof params.fail === 'function') {
+                                    params.fail();
+                                }
+                            }
+                        }
+                    };
+
+                    if (typeof this.gridApi.setGridOption === 'function') {
+                        this.gridApi.setGridOption('datasource', datasource);
+                        return;
+                    }
+
+                    if (typeof this.gridApi.setDatasource === 'function') {
+                        this.gridApi.setDatasource(datasource);
                     }
                 },
 
                 refreshGrid() {
-                    this.loadData();
+                    if (!this.gridApi) return;
+
+                    if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+                        this.gridApi.purgeInfiniteCache();
+                    } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+                        this.gridApi.refreshInfiniteCache();
+                    }
                 },
 
                 onSearch() {
-                    this.searchQuery = document.getElementById('fb-search').value;
-                    this.gridApi.setGridOption('quickFilterText', this.searchQuery);
+                    this.searchQuery = document.getElementById('fb-search').value.trim();
+                    this.refreshGrid();
+                },
+
+                clearSearch() {
+                    document.getElementById('fb-search').value = '';
+                    this.searchQuery = '';
+                    this.refreshGrid();
+                },
+
+                finalBobExportUrl() {
+                    const url = new URL('{{ route('reconciliation.reporting.final-bob.export') }}');
+
+                    if (this.batchId) {
+                        url.searchParams.set('batch_id', this.batchId);
+                    }
+
+                    if (this.searchQuery) {
+                        url.searchParams.set('search', this.searchQuery);
+                    }
+
+                    return url.toString();
                 }
-
-
             }));
         });
     </script>

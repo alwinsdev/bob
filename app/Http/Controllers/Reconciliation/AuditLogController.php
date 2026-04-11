@@ -37,6 +37,7 @@ class AuditLogController extends Controller
                 'users.email as user_email',
                 'reconciliation_audit_logs.created_at',
                 'reconciliation_audit_logs.notes',
+                DB::raw("'reconciliation' as source"),
             ]);
 
         $patchLogs = DB::table('contract_patch_logs')
@@ -52,6 +53,7 @@ class AuditLogController extends Controller
                 'users.email as user_email',
                 'contract_patch_logs.created_at',
                 DB::raw("'Contract patched via automated engine' as notes"),
+                DB::raw("'contract_patch' as source"),
             ]);
 
         $query = DB::table(DB::raw("({$auditLogs->toSql()} UNION {$patchLogs->toSql()}) as combined_logs"))
@@ -73,7 +75,10 @@ class AuditLogController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('transaction_id', 'like', "%{$search}%")
-                    ->orWhere('user_name', 'like', "%{$search}%");
+                    ->orWhere('user_name', 'like', "%{$search}%")
+                    ->orWhere('user_email', 'like', "%{$search}%")
+                    ->orWhere('action', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
             });
         }
 
@@ -114,6 +119,7 @@ class AuditLogController extends Controller
                 'modified_by_user_id' => $item->modified_by_user_id,
                 'created_at' => $item->created_at,
                 'notes' => $item->notes,
+                'source' => $item->source,
                 'modified_by' => [
                     'id' => $item->modified_by_user_id,
                     'name' => $item->user_name,

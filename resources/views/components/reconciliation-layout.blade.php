@@ -421,6 +421,29 @@
         <main class="p-6 lg:p-8">
             {{ $slot }}
         </main>
+
+        <footer class="px-6 lg:px-8 pb-6">
+            @php
+                $developerName = config('branding.developed_by');
+                $developerUrl = config('branding.developed_by_url');
+                $isRedMindBrand = strcasecmp((string) $developerName, 'RedMind Technologies') === 0;
+            @endphp
+            <div class="rounded-xl px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-1.5 text-xs"
+                style="background: var(--bob-bg-card); border: 1px solid var(--bob-border-light); color: var(--bob-text-faint);">
+                <div>
+                    Developed by
+                    <a href="{{ $developerUrl }}" target="_blank" rel="noopener noreferrer" class="font-semibold hover:underline" style="color: var(--bob-text-primary);">
+                        @if ($isRedMindBrand)
+                            <span style="color: #ef4444;">R</span>ed<span style="color: #ef4444;">M</span>ind Technologies
+                        @else
+                            {{ $developerName }}
+                        @endif
+                    </a>
+                </div>
+                <div>Support: <a href="mailto:{{ config('branding.support_email') }}" class="font-medium hover:underline" style="color: var(--bob-text-muted);">{{ config('branding.support_email') }}</a></div>
+                <div>Copyright © {{ 2026 }} {{ config('branding.copyright_holder') }} | Version {{ config('branding.version') }}</div>
+            </div>
+        </footer>
     </div>
 
     @stack('scripts')

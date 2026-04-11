@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reconciliation;
 use App\Http\Controllers\Controller;
 use App\Models\ContractPatchLog;
 use App\Models\ImportBatch;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -33,7 +34,10 @@ class ContractPatchReportingController extends Controller
         $request->validate([
             'parent_batch_id' => ['nullable', 'string', 'max:26'],
             'batch_id' => ['nullable', 'string', 'max:26'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:250'],
             'search' => ['nullable', 'string', 'max:120'],
+            'sortModel' => ['nullable', 'string'],
         ]);
 
         $parentBatches = $this->parentBatchOptions();
@@ -72,11 +76,25 @@ class ContractPatchReportingController extends Controller
             });
         }
 
-        $total = (clone $query)->count();
+        $this->applyReportSort($query, $request->input('sortModel'), [
+            'patched_at' => ['created_at'],
+            'contract_id' => ['contract_id'],
+            'old_agent_name' => ['old_agent_name'],
+            'new_agent_name' => ['new_agent_name'],
+            'old_department' => ['old_department'],
+            'new_department' => ['new_department'],
+            'old_payee_name' => ['old_payee_name'],
+            'new_payee_name' => ['new_payee_name'],
+            'flag_value' => ['flag_value'],
+            'change_type' => ['change_type'],
+        ], ['created_at'], 'desc');
 
-        $rows = $query
-            ->orderByDesc('created_at')
-            ->get()
+        $total = (clone $query)->count();
+        $perPage = max(1, min((int) $request->integer('limit', 75), 250));
+        $page = max(1, (int) $request->integer('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        $rows = collect($paginator->items())
             ->map(function (ContractPatchLog $log) {
                 return [
                     'id' => $log->id,
@@ -99,9 +117,13 @@ class ContractPatchReportingController extends Controller
             ->values();
 
         return response()->json([
+            'data' => $rows,
             'rows' => $rows,
+            'total' => $total,
             'totalCount' => $total,
-            'runSummary' => $this->runSummary($selectedPatchBatchId),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'runSummary' => $this->runSummary($selectedPatchBatchId, $selectedParentBatchId),
         ]);
     }
 
@@ -177,13 +199,21 @@ class ContractPatchReportingController extends Controller
 
     private function resolvePatchBatchId(Request $request, array $allowedPatchIds): ?string
     {
+        if (!$request->has('batch_id')) {
+            return null;
+        }
+
         $requestedPatchId = trim((string) $request->input('batch_id', ''));
+
+        if ($requestedPatchId === '') {
+            return null;
+        }
 
         if ($requestedPatchId !== '' && in_array($requestedPatchId, $allowedPatchIds, true)) {
             return $requestedPatchId;
         }
 
-        return $allowedPatchIds[0] ?? null;
+        return null;
     }
 
     private function serializeParentBatches(Collection $batches): array
@@ -218,32 +248,120 @@ class ContractPatchReportingController extends Controller
         })->values()->all();
     }
 
-    private function runSummary(?string $patchBatchId): ?array
+    private function runSummary(?string $patchBatchId, ?string $parentBatchId = null): ?array
     {
-        if (!$patchBatchId) {
+        if (!$patchBatchId && !$parentBatchId) {
             return null;
         }
 
-        $batch = ImportBatch::query()
+        if ($patchBatchId) {
+            $batch = ImportBatch::query()
+                ->where('batch_type', 'contract_patch')
+                ->whereKey($patchBatchId)
+                ->first();
+
+            if (!$batch) {
+                return null;
+            }
+
+            return [
+                'id' => $batch->id,
+                'contract_original_name' => $batch->contract_original_name,
+                'status' => $batch->status,
+                'processed_records' => (int) $batch->processed_records,
+                'contract_patched_records' => (int) $batch->contract_patched_records,
+                'skipped_records' => (int) $batch->skipped_records,
+                'failed_records' => (int) $batch->failed_records,
+                'skipped_summary' => $batch->skipped_summary ?? [],
+                'failure_summary' => $batch->failure_summary ?? [],
+                'formatted_date' => optional($batch->created_at)->format('M d, Y h:i A'),
+            ];
+        }
+
+        $runs = ImportBatch::query()
             ->where('batch_type', 'contract_patch')
-            ->whereKey($patchBatchId)
-            ->first();
+            ->where('parent_batch_id', $parentBatchId)
+            ->latest('created_at')
+            ->get([
+                'id',
+                'contract_original_name',
+                'status',
+                'processed_records',
+                'contract_patched_records',
+                'skipped_records',
+                'failed_records',
+                'skipped_summary',
+                'failure_summary',
+                'created_at',
+            ]);
 
-        if (!$batch) {
+        if ($runs->isEmpty()) {
             return null;
         }
+
+        $latestRun = $runs->first();
+        $skippedSummary = [];
+        $failureSummary = [];
+
+        foreach ($runs as $run) {
+            foreach (($run->skipped_summary ?? []) as $reason => $count) {
+                $label = trim((string) $reason);
+                $label = $label !== '' ? $label : 'Unspecified reason';
+                $skippedSummary[$label] = ($skippedSummary[$label] ?? 0) + max(0, (int) $count);
+            }
+
+            foreach (($run->failure_summary ?? []) as $reason => $count) {
+                $label = trim((string) $reason);
+                $label = $label !== '' ? $label : 'Unspecified failure';
+                $failureSummary[$label] = ($failureSummary[$label] ?? 0) + max(0, (int) $count);
+            }
+        }
+
+        arsort($skippedSummary);
+        arsort($failureSummary);
 
         return [
-            'id' => $batch->id,
-            'contract_original_name' => $batch->contract_original_name,
-            'status' => $batch->status,
-            'processed_records' => (int) $batch->processed_records,
-            'contract_patched_records' => (int) $batch->contract_patched_records,
-            'skipped_records' => (int) $batch->skipped_records,
-            'failed_records' => (int) $batch->failed_records,
-            'skipped_summary' => $batch->skipped_summary ?? [],
-            'failure_summary' => $batch->failure_summary ?? [],
-            'formatted_date' => optional($batch->created_at)->format('M d, Y h:i A'),
+            'id' => null,
+            'contract_original_name' => 'All adjustment runs',
+            'status' => $runs->count() > 1 ? 'aggregated' : $latestRun->status,
+            'processed_records' => (int) $runs->sum('processed_records'),
+            'contract_patched_records' => (int) $runs->sum('contract_patched_records'),
+            'skipped_records' => (int) $runs->sum('skipped_records'),
+            'failed_records' => (int) $runs->sum('failed_records'),
+            'skipped_summary' => $skippedSummary,
+            'failure_summary' => $failureSummary,
+            'formatted_date' => optional($latestRun->created_at)->format('M d, Y h:i A'),
         ];
+    }
+
+    private function applyReportSort(Builder $query, ?string $sortModelJson, array $allowedSorts, array $defaultColumns, string $defaultDirection = 'asc'): void
+    {
+        $sortModel = json_decode((string) $sortModelJson, true);
+        $appliedSort = false;
+
+        if (is_array($sortModel)) {
+            foreach ($sortModel as $sort) {
+                $columns = $allowedSorts[$sort['colId'] ?? ''] ?? null;
+                if (!$columns) {
+                    continue;
+                }
+
+                $direction = strtolower((string) ($sort['sort'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+
+                foreach ((array) $columns as $column) {
+                    $query->orderBy($column, $direction);
+                }
+
+                $appliedSort = true;
+            }
+        }
+
+        if ($appliedSort) {
+            return;
+        }
+
+        foreach ($defaultColumns as $column) {
+            $query->orderBy($column, $defaultDirection);
+        }
     }
 }

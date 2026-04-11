@@ -8,6 +8,7 @@ use App\Models\ReconciliationQueue;
 use App\Exports\FinalBobExport;
 use App\Exports\LocklistImpactExport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -28,23 +29,42 @@ class CommissionReportingController extends Controller
      */
     public function finalBobData(Request $request)
     {
+        $request->validate([
+            'batch_id' => ['nullable', 'string', 'max:26'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:250'],
+            'search' => ['nullable', 'string', 'max:120'],
+            'sortModel' => ['nullable', 'string'],
+        ]);
+
         $batchId = $this->resolveReportingBatchId($request);
+        $search = trim((string) $request->input('search', ''));
 
-        $query = ReconciliationQueue::resolved()
-            ->notArchived()
-            ->select([
-                'id', 'contract_id', 'member_first_name', 'member_last_name',
-                'aligned_agent_name', 'group_team_sales', 'payee_name',
-                'match_method', 'override_flag', 'import_batch_id'
-            ]);
+        $query = $this->buildFinalBobQuery($batchId);
 
-        if ($batchId) {
-            $query->where('import_batch_id', $batchId);
-        } else {
-            $query->whereRaw('1 = 0');
+        if ($search !== '') {
+            $this->applyFinalBobSearch($query, $search);
         }
 
-        $records = $query->get();
+        $total = (clone $query)->count();
+        $overrideCount = (clone $query)
+            ->where('override_flag', true)
+            ->count();
+
+        $this->applyReportSort($query, $request->input('sortModel'), [
+            'contract_id' => ['contract_id'],
+            'member_name' => ['member_last_name', 'member_first_name'],
+            'agent_name' => ['aligned_agent_name'],
+            'department' => ['group_team_sales'],
+            'payee_name' => ['payee_name'],
+            'match_method' => ['match_method'],
+            'override_flag' => ['override_flag'],
+        ], ['contract_id']);
+
+        $perPage = max(1, min((int) $request->integer('limit', 100), 250));
+        $page = max(1, (int) $request->integer('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+        $records = collect($paginator->items());
 
         $latestPatchByContract = collect();
         if ($batchId && $records->isNotEmpty()) {
@@ -65,7 +85,8 @@ class CommissionReportingController extends Controller
             }
         }
 
-        return response()->json($records->map(function ($record) use ($latestPatchByContract, $batchId) {
+        return response()->json([
+            'data' => $records->map(function ($record) use ($latestPatchByContract, $batchId) {
             $patchMeta = $latestPatchByContract->get($record->contract_id);
 
             return [
@@ -87,7 +108,15 @@ class CommissionReportingController extends Controller
                     ])
                     : null,
             ];
-        }));
+            })->values(),
+            'total' => $total,
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'metrics' => [
+                'total' => $total,
+                'override_count' => $overrideCount,
+            ],
+        ]);
     }
 
     /**
@@ -161,22 +190,40 @@ class CommissionReportingController extends Controller
      */
     public function locklistImpactData(Request $request)
     {
+        $request->validate([
+            'batch_id' => ['nullable', 'string', 'max:26'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:250'],
+            'search' => ['nullable', 'string', 'max:120'],
+            'sortModel' => ['nullable', 'string'],
+        ]);
+
         $batchId = $this->resolveReportingBatchId($request);
+        $search = trim((string) $request->input('search', ''));
 
-        $query = ReconciliationQueue::where('override_flag', true)
-            ->notArchived()
-            ->select([
-                'id', 'contract_id', 'original_agent_name', 'aligned_agent_name',
-                'original_match_method', 'match_method', 'member_first_name', 'member_last_name'
-            ]);
+        $query = $this->buildLocklistImpactQuery($batchId);
 
-        if ($batchId) {
-            $query->where('import_batch_id', $batchId);
-        } else {
-            $query->whereRaw('1 = 0');
+        if ($search !== '') {
+            $this->applyLocklistImpactSearch($query, $search);
         }
 
-        return response()->json($query->get()->map(function ($record) {
+        $total = (clone $query)->count();
+
+        $this->applyReportSort($query, $request->input('sortModel'), [
+            'contract_id' => ['contract_id'],
+            'member_name' => ['member_last_name', 'member_first_name'],
+            'source_before' => ['original_match_method'],
+            'old_agent' => ['original_agent_name'],
+            'new_agent' => ['aligned_agent_name'],
+            'override_flag' => ['override_flag'],
+        ], ['contract_id']);
+
+        $perPage = max(1, min((int) $request->integer('limit', 100), 250));
+        $page = max(1, (int) $request->integer('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => collect($paginator->items())->map(function ($record) {
             $memberName = trim($record->member_first_name . ' ' . $record->member_last_name);
             return [
                 'id' => $record->id,
@@ -188,7 +235,11 @@ class CommissionReportingController extends Controller
                     $this->humanizeMethod($record->original_match_method) : 'Unmatched',
                 'override_flag' => true,
             ];
-        }));
+            })->values(),
+            'total' => $total,
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+        ]);
     }
 
     private function humanizeMethod(?string $method): string
@@ -400,6 +451,119 @@ class CommissionReportingController extends Controller
             ->whereIn('status', ['completed', 'completed_with_errors'])
             ->whereKey($batchId)
             ->exists();
+    }
+
+    private function buildFinalBobQuery(?string $batchId): Builder
+    {
+        $query = ReconciliationQueue::resolved()
+            ->notArchived()
+            ->select([
+                'id',
+                'contract_id',
+                'member_first_name',
+                'member_last_name',
+                'aligned_agent_name',
+                'group_team_sales',
+                'payee_name',
+                'match_method',
+                'override_flag',
+                'import_batch_id',
+            ]);
+
+        if ($batchId) {
+            $query->where('import_batch_id', $batchId);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query;
+    }
+
+    private function buildLocklistImpactQuery(?string $batchId): Builder
+    {
+        $query = ReconciliationQueue::query()
+            ->where('override_flag', true)
+            ->notArchived()
+            ->select([
+                'id',
+                'contract_id',
+                'original_agent_name',
+                'aligned_agent_name',
+                'original_match_method',
+                'match_method',
+                'member_first_name',
+                'member_last_name',
+            ]);
+
+        if ($batchId) {
+            $query->where('import_batch_id', $batchId);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query;
+    }
+
+    private function applyFinalBobSearch(Builder $query, string $search): void
+    {
+        $like = '%' . $search . '%';
+
+        $query->where(function (Builder $builder) use ($like) {
+            $builder->where('contract_id', 'like', $like)
+                ->orWhere('aligned_agent_name', 'like', $like)
+                ->orWhere('payee_name', 'like', $like)
+                ->orWhere('group_team_sales', 'like', $like)
+                ->orWhere('match_method', 'like', $like)
+                ->orWhere('member_first_name', 'like', $like)
+                ->orWhere('member_last_name', 'like', $like)
+                ->orWhereRaw("concat_ws(' ', member_first_name, member_last_name) like ?", [$like]);
+        });
+    }
+
+    private function applyLocklistImpactSearch(Builder $query, string $search): void
+    {
+        $like = '%' . $search . '%';
+
+        $query->where(function (Builder $builder) use ($like) {
+            $builder->where('contract_id', 'like', $like)
+                ->orWhere('original_agent_name', 'like', $like)
+                ->orWhere('aligned_agent_name', 'like', $like)
+                ->orWhere('original_match_method', 'like', $like)
+                ->orWhere('member_first_name', 'like', $like)
+                ->orWhere('member_last_name', 'like', $like)
+                ->orWhereRaw("concat_ws(' ', member_first_name, member_last_name) like ?", [$like]);
+        });
+    }
+
+    private function applyReportSort(Builder $query, ?string $sortModelJson, array $allowedSorts, array $defaultColumns, string $defaultDirection = 'asc'): void
+    {
+        $sortModel = json_decode((string) $sortModelJson, true);
+        $appliedSort = false;
+
+        if (is_array($sortModel)) {
+            foreach ($sortModel as $sort) {
+                $columns = $allowedSorts[$sort['colId'] ?? ''] ?? null;
+                if (!$columns) {
+                    continue;
+                }
+
+                $direction = strtolower((string) ($sort['sort'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+
+                foreach ((array) $columns as $column) {
+                    $query->orderBy($column, $direction);
+                }
+
+                $appliedSort = true;
+            }
+        }
+
+        if ($appliedSort) {
+            return;
+        }
+
+        foreach ($defaultColumns as $column) {
+            $query->orderBy($column, $defaultDirection);
+        }
     }
 
 }

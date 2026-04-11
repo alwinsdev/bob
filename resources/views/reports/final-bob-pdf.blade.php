@@ -55,7 +55,7 @@
     </table>
 
     <div class="footer">
-        © {{ date('Y') }} ENS Environmental Consultancy - Internal Reconciliation System. Page <span class="pagenum"></span>
+        © {{ date('Y') }} BOB Reconciliation System. Page <span class="pagenum"></span>
     </div>
 </body>
 </html>

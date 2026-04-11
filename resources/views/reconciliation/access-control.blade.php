@@ -1,6 +1,6 @@
 <x-reconciliation-layout>
     <x-slot name="pageTitle">Access Control</x-slot>
-    <x-slot name="pageSubtitle">Enterprise administration for role governance, permission strategy, and user access boundaries</x-slot>
+    <x-slot name="pageSubtitle">Administration for role governance, permission strategy, and user access boundaries</x-slot>
 
     @php
         $permissionCatalog = [

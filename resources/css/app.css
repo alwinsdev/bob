@@ -843,6 +843,8 @@ html.bob-light .bob-main button.relative.w-11.h-6.rounded-full span {
     /* ── Sidebar ── */
     .bob-sidebar {
         @apply fixed left-0 top-0 h-screen w-[260px] z-40 flex flex-col;
+        height: 100vh;
+        height: 100dvh;
         background-color: var(--bob-bg-sidebar);
         border-right: 1px solid var(--bob-border-subtle);
         transition: width 0.22s ease;
@@ -877,6 +879,8 @@ html.bob-light .bob-main button.relative.w-11.h-6.rounded-full span {
     /* ── Main Area ── */
     .bob-main {
         @apply ml-[260px] min-h-screen flex flex-col;
+        min-height: 100vh;
+        min-height: 100dvh;
         background-color: var(--bob-bg-body);
         transition: margin-left 0.22s ease;
     }

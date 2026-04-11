@@ -12,10 +12,10 @@
                         <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                         </svg>
-                        <input @input.debounce.500ms="updateSearch($event.target.value)" type="text" class="bob-search-input" placeholder="Search logs by ID, Name..." />
+                        <input @input.debounce.500ms="updateSearch($event.target.value)" type="text" class="bob-search-input" placeholder="Search by ID, user, action, or note..." />
                     </div>
                     <div class="flex items-center gap-1.5 p-1 rounded-xl" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
-                        <template x-for="opt in [{v:'all',l:'All'},{v:'resolved',l:'Resolved'},{v:'flagged',l:'Flagged'}]" :key="opt.v">
+                        <template x-for="opt in [{v:'all',l:'All'},{v:'resolved',l:'Resolved'},{v:'flagged',l:'Flagged'},{v:'patch_applied',l:'Patched'},{v:'lock_acquired',l:'Lock In'},{v:'lock_released',l:'Lock Out'}]" :key="opt.v">
                             <button @click="updateFilter(opt.v)"
                                 class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200"
                                 :class="filterAction === opt.v ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'"

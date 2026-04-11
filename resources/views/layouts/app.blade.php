@@ -18,7 +18,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
+        <div class="min-h-screen min-h-[100dvh] bg-gray-100">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
@@ -34,6 +34,28 @@
             <main>
                 {{ $slot }}
             </main>
+
+            <footer class="border-t border-slate-200 bg-white/80 backdrop-blur-sm">
+                @php
+                    $developerName = config('branding.developed_by');
+                    $developerUrl = config('branding.developed_by_url');
+                    $isRedMindBrand = strcasecmp((string) $developerName, 'RedMind Technologies') === 0;
+                @endphp
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-xs text-slate-500 flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
+                    <div>
+                        Developed by
+                        <a href="{{ $developerUrl }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-slate-700 hover:text-slate-900 hover:underline">
+                            @if ($isRedMindBrand)
+                                <span style="color: #ef4444;">R</span>ed<span style="color: #ef4444;">M</span>ind Technologies
+                            @else
+                                {{ $developerName }}
+                            @endif
+                        </a>
+                    </div>
+                    <div>Support: <a href="mailto:{{ config('branding.support_email') }}" class="font-medium text-slate-600 hover:text-slate-900 hover:underline">{{ config('branding.support_email') }}</a></div>
+                    <div>Copyright © {{ 2026 }} {{ config('branding.copyright_holder') }} | Version {{ config('branding.version') }}</div>
+                </div>
+            </footer>
         </div>
     </body>
 </html>

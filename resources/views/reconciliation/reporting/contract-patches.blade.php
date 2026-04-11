@@ -138,7 +138,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     @push('head')
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
@@ -193,6 +192,7 @@
                     totalRows: 0,
                     runSummary: null,
                     gridApi: null,
+                    gridOptions: null,
 
                     init() {
                         if (!this.parentBatchOptions.length) {
@@ -259,10 +259,10 @@
                     },
 
                     onSearch() {
-                        this.loadData();
+                        this.refreshGrid();
                     },
 
-                    requestUrl() {
+                    requestUrl(page, pageSize, sortModel = []) {
                         const params = new URLSearchParams();
 
                         if (this.parentBatchId) {
@@ -274,6 +274,10 @@
                         if (this.searchQuery) {
                             params.set('search', this.searchQuery);
                         }
+
+                        params.set('page', page);
+                        params.set('limit', pageSize);
+                        params.set('sortModel', JSON.stringify(sortModel));
 
                         return `${config.dataUrl}?${params.toString()}`;
                     },
@@ -368,29 +372,94 @@
                             },
                         ];
 
-                        const gridOptions = {
+                        this.gridOptions = {
                             columnDefs,
-                            rowModelType: 'clientSide',
+                            rowModelType: 'infinite',
                             rowHeight: 48,
                             headerHeight: 46,
                             pagination: true,
                             paginationPageSize: 75,
+                            cacheBlockSize: 75,
+                            maxBlocksInCache: 10,
                             suppressCellFocus: true,
                             enableCellTextSelection: true,
                             animateRows: true,
                             defaultColDef: {
                                 sortable: true,
-                                filter: true,
+                                filter: false,
                                 resizable: true,
                             },
                             overlayLoadingTemplate: '<div class="ag-custom-loading"><div class="w-10 h-10 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin"></div></div>',
                             overlayNoRowsTemplate: '<div class="flex flex-col items-center gap-2 pt-20"><span class="text-slate-500 font-bold text-sm uppercase tracking-widest">No adjustment records found</span></div>',
                         };
 
-                        this.gridApi = agGrid.createGrid(gridElement, gridOptions);
+                        this.gridApi = agGrid.createGrid(gridElement, this.gridOptions);
+                        this.setGridDataSource();
                     },
 
-                    async loadData() {
+                    setGridDataSource() {
+                        const pageSize = this.gridOptions?.cacheBlockSize || 75;
+                        const datasource = {
+                            getRows: async (params) => {
+                                const startRow = params.startRow ?? 0;
+                                const page = Math.floor(startRow / pageSize) + 1;
+
+                                try {
+                                    const response = await fetch(this.requestUrl(page, pageSize, params.sortModel || []));
+                                    if (!response.ok) {
+                                        throw new Error('Failed to load adjustment detail data');
+                                    }
+
+                                    const payload = await response.json();
+                                    const rows = payload.data || payload.rows || [];
+                                    const total = Number(payload.total || payload.totalCount || 0);
+                                    const endRow = startRow + rows.length;
+                                    const lastRow = endRow >= total ? total : -1;
+
+                                    this.totalRows = total;
+                                    this.runSummary = payload.runSummary || null;
+                                    this.metrics.patched = Number(this.runSummary?.contract_patched_records ?? 0);
+                                    this.metrics.skipped = Number(this.runSummary?.skipped_records ?? 0);
+                                    this.metrics.failed = Number(this.runSummary?.failed_records ?? 0);
+
+                                    if (typeof params.successCallback === 'function') {
+                                        params.successCallback(rows, lastRow);
+                                        return;
+                                    }
+
+                                    if (typeof params.success === 'function') {
+                                        params.success({ rowData: rows, rowCount: total });
+                                    }
+                                } catch (error) {
+                                    console.error('Commission adjustment detail load error:', error);
+
+                                    if (typeof params.failCallback === 'function') {
+                                        params.failCallback();
+                                        return;
+                                    }
+
+                                    if (typeof params.fail === 'function') {
+                                        params.fail();
+                                    }
+                                }
+                            }
+                        };
+
+                        if (typeof this.gridApi.setGridOption === 'function') {
+                            this.gridApi.setGridOption('datasource', datasource);
+                            return;
+                        }
+
+                        if (typeof this.gridApi.setDatasource === 'function') {
+                            this.gridApi.setDatasource(datasource);
+                        }
+                    },
+
+                    loadData() {
+                        this.refreshGrid();
+                    },
+
+                    refreshGrid() {
                         if (!this.gridApi) {
                             this.initGrid();
                         }
@@ -399,34 +468,10 @@
                             return;
                         }
 
-                        this.gridApi.showLoadingOverlay();
-
-                        try {
-                            const response = await fetch(this.requestUrl());
-                            if (!response.ok) {
-                                throw new Error('Failed to load adjustment detail data');
-                            }
-                            const payload = await response.json();
-
-                            const rows = payload.rows || [];
-                            this.totalRows = Number(payload.totalCount || rows.length || 0);
-                            this.runSummary = payload.runSummary || null;
-
-                            this.gridApi.setGridOption('rowData', rows);
-                            this.gridApi.setGridOption('quickFilterText', this.searchQuery || '');
-
-                            if (rows.length === 0) {
-                                this.gridApi.showNoRowsOverlay();
-                            } else {
-                                this.gridApi.hideOverlay();
-                            }
-
-                            this.metrics.patched = Number(this.runSummary?.contract_patched_records ?? rows.length);
-                            this.metrics.skipped = Number(this.runSummary?.skipped_records ?? 0);
-                            this.metrics.failed = Number(this.runSummary?.failed_records ?? 0);
-                        } catch (error) {
-                            console.error('Commission adjustment detail load error:', error);
-                            this.gridApi.showNoRowsOverlay();
+                        if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+                            this.gridApi.purgeInfiniteCache();
+                        } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+                            this.gridApi.refreshInfiniteCache();
                         }
                     },
                 }));

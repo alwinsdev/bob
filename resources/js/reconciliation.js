@@ -70,8 +70,9 @@ document.addEventListener('alpine:init', () => {
                                     </span>
                                 </div>`;
                             }
+                            const rowId = encodeURIComponent(String(params.data.id || ''));
                             return `<div class="flex items-center h-full">
-                                <button onclick="window.dispatchEvent(new CustomEvent('open-drawer', {detail: '${params.data.id}'}))"
+                                <button onclick="window.dispatchEvent(new CustomEvent('open-drawer', {detail: decodeURIComponent('${rowId}')}))"
                                     class="bob-review-btn">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     Review
@@ -93,16 +94,17 @@ document.addEventListener('alpine:init', () => {
                                 resolved: 'resolved',
                             };
                             const status = styles[val] || styles.pending;
+                            const statusLabel = this.escapeHtml(val);
 
                             let flagLabel = '';
                             if (val === 'flagged' && params.data && params.data.flag_value) {
-                                flagLabel = `<div class="text-[9px] font-black tracking-widest uppercase mt-0.5" style="color:rgba(225,29,72,0.85);">${params.data.flag_value}</div>`;
+                                flagLabel = `<div class="text-[9px] font-black tracking-widest uppercase mt-0.5" style="color:rgba(225,29,72,0.85);">${this.escapeHtml(params.data.flag_value)}</div>`;
                             }
 
                             return `<div class="flex flex-col justify-center h-full leading-tight">
                                 <div>
                                     <span class="bob-status-pill bob-status-${status}">
-                                        <span class="bob-status-dot"></span>${val}
+                                        <span class="bob-status-dot"></span>${statusLabel}
                                     </span>
                                 </div>
                                 ${flagLabel}
@@ -115,7 +117,7 @@ document.addEventListener('alpine:init', () => {
                         width: 145,
                         cellRenderer: (params) => {
                             if (!params.value) return '';
-                            return `<span class="bob-contract-id">${params.value}</span>`;
+                            return `<span class="bob-contract-id">${this.escapeHtml(params.value)}</span>`;
                         }
                     },
                     {
@@ -124,7 +126,7 @@ document.addEventListener('alpine:init', () => {
                         width: 130,
                         cellRenderer: (params) => {
                             if (!params.value) return '';
-                            return `<span class="bob-person-name">${params.value}</span>`;
+                            return `<span class="bob-person-name">${this.escapeHtml(params.value)}</span>`;
                         }
                     },
                     {
@@ -133,7 +135,7 @@ document.addEventListener('alpine:init', () => {
                         width: 130,
                         cellRenderer: (params) => {
                             if (!params.value) return '';
-                            return `<span class="bob-person-name">${params.value}</span>`;
+                            return `<span class="bob-person-name">${this.escapeHtml(params.value)}</span>`;
                         }
                     },
                     {
@@ -144,7 +146,7 @@ document.addEventListener('alpine:init', () => {
                             if (!params.value) return `<div class="flex items-center h-full"><span class="bob-empty-value">—</span></div>`;
                             return `<div class="flex items-center h-full">
                                 <span class="bob-carrier-pill">
-                                    ${params.value}
+                                    ${this.escapeHtml(params.value)}
                                 </span>
                             </div>`;
                         }
@@ -176,7 +178,7 @@ document.addEventListener('alpine:init', () => {
 
                             // IMS match
                             if (method.startsWith('ims:')) {
-                                const sub = params.value.split(':')[1] || '';
+                                const sub = this.escapeHtml(params.value.split(':')[1] || '');
                                 return `<div class="flex items-center h-full">
                                     <span style="background:rgba(99,102,241,0.15);color:#818cf8;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;">
                                         IMS · ${sub}
@@ -186,7 +188,7 @@ document.addEventListener('alpine:init', () => {
 
                             // Health Sherpa match
                             if (method.startsWith('hs:')) {
-                                const sub = params.value.split(':')[1] || '';
+                                const sub = this.escapeHtml(params.value.split(':')[1] || '');
                                 return `<div class="flex items-center h-full">
                                     <span class="bob-badge-matched" style="font-size:10px">
                                         HS · ${sub}
@@ -195,7 +197,7 @@ document.addEventListener('alpine:init', () => {
                             }
 
                             return `<div class="flex items-center h-full">
-                                <span style="font-size:10px;color:var(--bob-text-faint)">${params.value}</span>
+                                <span style="font-size:10px;color:var(--bob-text-faint)">${this.escapeHtml(params.value)}</span>
                             </div>`;
                         }
                     },
@@ -245,7 +247,7 @@ document.addEventListener('alpine:init', () => {
                         width: 140,
                         cellRenderer: (params) => {
                             if (!params.value) return `<span class="bob-empty-value">—</span>`;
-                            return `<span class="bob-ims-id">${params.value}</span>`;
+                            return `<span class="bob-ims-id">${this.escapeHtml(params.value)}</span>`;
                         }
                     },
                     {
@@ -257,7 +259,7 @@ document.addEventListener('alpine:init', () => {
                             return `<div class="flex items-center h-full">
                                 <span class="bob-agent-pill">
                                     <svg class="w-3.5 h-3.5 opacity-80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-                                    ${params.value}
+                                    ${this.escapeHtml(params.value)}
                                 </span>
                             </div>`;
                         }

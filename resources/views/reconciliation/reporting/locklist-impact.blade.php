@@ -5,7 +5,7 @@
         <a href="{{ route('reconciliation.reporting.dashboard') }}" class="bob-btn-ghost text-xs">Dashboard</a>
         <a href="{{ route('reconciliation.reporting.final-bob') }}" class="bob-btn-primary text-xs">View Final BOB</a>
         @can('reconciliation.export.download')
-        <a href="{{ route('reconciliation.reporting.locklist-impact.export') }}" class="bob-btn-primary group" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #047857;">
+        <a :href="locklistExportUrl()" class="bob-btn-primary group" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #047857;">
             <svg class="w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
@@ -101,6 +101,9 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('locklistImpact', () => ({
                 gridApi: null,
+                gridOptions: null,
+                searchQuery: '',
+                batchId: new URLSearchParams(window.location.search).get('batch_id') || '',
 
                 init() {
                     this.initGrid();
@@ -128,6 +131,16 @@
                     return `<span style="font-size:9px;font-weight:700;color:var(--bob-text-faint);text-transform:uppercase;letter-spacing:0.05em">${ms}</span>`;
                 },
 
+                updateMetrics(total) {
+                    const resolvedTotal = Number(total || 0);
+                    document.getElementById('stat-conflicts').innerText = resolvedTotal.toLocaleString();
+                    document.getElementById('stat-automation').innerText = resolvedTotal.toLocaleString();
+                    document.getElementById('stat-refresh').innerText = new Date().toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    });
+                },
+
                 initGrid() {
                     const colDefs = [
                         { field: 'contract_id', headerName: 'Contract ID', flex: 1.2, minWidth: 130, 
@@ -148,19 +161,21 @@
                           cellRenderer: p => p.value ? `<span style="background:rgba(168,85,247,0.12);color:#c084fc;padding:4px 10px;border-radius:8px;font-size:9px;font-weight:800;border:1px solid rgba(168,85,247,0.2);display:inline-flex;align-items:center;gap:4px;letter-spacing:0.05em">RESOLVED</span>` : '' }
                     ];
 
-                    const gridOptions = {
+                    this.gridOptions = {
                         columnDefs: colDefs,
-                        rowModelType: 'clientSide',
+                        rowModelType: 'infinite',
                         rowHeight: 56,
                         headerHeight: 52,
                         pagination: true,
                         paginationPageSize: 100,
+                        cacheBlockSize: 100,
+                        maxBlocksInCache: 10,
                         suppressCellFocus: true,
                         enableCellTextSelection: true,
                         animateRows: true,
                         defaultColDef: {
                             sortable: true,
-                            filter: true,
+                            filter: false,
                             resizable: true,
                         },
                         overlayLoadingTemplate: '<div class="ag-custom-loading"><div class="w-10 h-10 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin"></div></div>',
@@ -168,32 +183,105 @@
                     };
 
                     const gridDiv = document.querySelector('#locklistImpactGrid');
-                    this.gridApi = agGrid.createGrid(gridDiv, gridOptions);
-                    this.loadData();
+                    this.gridApi = agGrid.createGrid(gridDiv, this.gridOptions);
+                    this.setGridDataSource();
                 },
 
-                async loadData() {
-                    this.gridApi.showLoadingOverlay();
-                    try {
-                        const res = await fetch('{{ route('reconciliation.reporting.locklist-impact.data') }}');
-                        const data = await res.json();
-                        this.gridApi.setGridOption('rowData', data);
-                        document.getElementById('stat-conflicts').innerText = data.length.toLocaleString();
-                        document.getElementById('stat-automation').innerText = data.length.toLocaleString();
-                        document.getElementById('stat-refresh').innerText = new Date().toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                        });
-                    } catch (err) {
-                        console.error('Grid load error:', err);
-                        this.gridApi.showNoRowsOverlay();
-                        document.getElementById('stat-refresh').innerText = 'Error';
+                setGridDataSource() {
+                    const pageSize = this.gridOptions?.cacheBlockSize || 100;
+                    const datasource = {
+                        getRows: async (params) => {
+                            const startRow = params.startRow ?? 0;
+                            const page = Math.floor(startRow / pageSize) + 1;
+                            const url = new URL('{{ route('reconciliation.reporting.locklist-impact.data') }}');
+
+                            if (this.batchId) {
+                                url.searchParams.set('batch_id', this.batchId);
+                            }
+
+                            if (this.searchQuery) {
+                                url.searchParams.set('search', this.searchQuery);
+                            }
+
+                            url.searchParams.set('page', page);
+                            url.searchParams.set('limit', pageSize);
+                            url.searchParams.set('sortModel', JSON.stringify(params.sortModel || []));
+
+                            try {
+                                const res = await fetch(url);
+                                if (!res.ok) {
+                                    throw new Error('Failed to load locklist impact data');
+                                }
+
+                                const payload = await res.json();
+                                const rows = payload.data || [];
+                                const total = Number(payload.total || 0);
+                                const endRow = startRow + rows.length;
+                                const lastRow = endRow >= total ? total : -1;
+
+                                this.updateMetrics(total);
+
+                                if (typeof params.successCallback === 'function') {
+                                    params.successCallback(rows, lastRow);
+                                    return;
+                                }
+
+                                if (typeof params.success === 'function') {
+                                    params.success({ rowData: rows, rowCount: total });
+                                }
+                            } catch (err) {
+                                console.error('Grid load error:', err);
+                                document.getElementById('stat-refresh').innerText = 'Error';
+
+                                if (typeof params.failCallback === 'function') {
+                                    params.failCallback();
+                                    return;
+                                }
+
+                                if (typeof params.fail === 'function') {
+                                    params.fail();
+                                }
+                            }
+                        }
+                    };
+
+                    if (typeof this.gridApi.setGridOption === 'function') {
+                        this.gridApi.setGridOption('datasource', datasource);
+                        return;
+                    }
+
+                    if (typeof this.gridApi.setDatasource === 'function') {
+                        this.gridApi.setDatasource(datasource);
+                    }
+                },
+
+                refreshGrid() {
+                    if (!this.gridApi) return;
+
+                    if (typeof this.gridApi.purgeInfiniteCache === 'function') {
+                        this.gridApi.purgeInfiniteCache();
+                    } else if (typeof this.gridApi.refreshInfiniteCache === 'function') {
+                        this.gridApi.refreshInfiniteCache();
                     }
                 },
 
                 onSearch() {
-                    const search = document.getElementById('li-search').value;
-                    this.gridApi.setGridOption('quickFilterText', search);
+                    this.searchQuery = document.getElementById('li-search').value.trim();
+                    this.refreshGrid();
+                },
+
+                locklistExportUrl() {
+                    const url = new URL('{{ route('reconciliation.reporting.locklist-impact.export') }}');
+
+                    if (this.batchId) {
+                        url.searchParams.set('batch_id', this.batchId);
+                    }
+
+                    if (this.searchQuery) {
+                        url.searchParams.set('search', this.searchQuery);
+                    }
+
+                    return url.toString();
                 }
             }));
         });

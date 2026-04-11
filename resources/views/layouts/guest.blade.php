@@ -1,418 +1,815 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'BOB System') }}</title>
-        
-        {{-- Custom SVG Favicon --}}
-        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%236366f1'/%3E%3Cpath fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' d='M29.375 35A5.625 5.625 0 0 1 35 29.375h5.625A5.625 5.625 0 0 1 46.25 35v5.625a5.625 5.625 0 0 1-5.625 5.625H35A5.625 5.625 0 0 1 29.375 40.625V35zM29.375 59.375A5.625 5.625 0 0 1 35 53.75h5.625A5.625 5.625 0 0 1 46.25 59.375V65a5.625 5.625 0 0 1-5.625 5.625H35A5.625 5.625 0 0 1 29.375 65v-5.625zM53.75 35A5.625 5.625 0 0 1 59.375 29.375H65A5.625 5.625 0 0 1 70.625 35v5.625a5.625 5.625 0 0 1-5.625 5.625h-5.625A5.625 5.625 0 0 1 53.75 40.625V35zM53.75 59.375A5.625 5.625 0 0 1 59.375 53.75H65A5.625 5.625 0 0 1 70.625 59.375V65A5.625 5.625 0 0 1 65 70.625h-5.625A5.625 5.625 0 0 1 53.75 65v-5.625z'/%3E%3C/svg%3E">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name', 'BOB') }} — Secure Access</title>
+    <meta name="description" content="Sign in to BOB System — Reconciliation, commission governance, and operational intelligence.">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-        <style>
-            :root {
-                --auth-bg-start: #0a1024;
-                --auth-bg-end: #1d2458;
-                --auth-surface: rgba(16, 24, 48, 0.76);
-                --auth-border: rgba(156, 173, 210, 0.22);
-                --auth-input-bg: rgba(14, 22, 44, 0.72);
-                --auth-input-border: rgba(156, 173, 210, 0.35);
-                --auth-text-main: #eef2ff;
-                --auth-text-muted: #a4b0cf;
-                --auth-text-faint: #8b97bc;
-                --auth-accent: #7f8bff;
-                --auth-accent-soft: #c7d2fe;
-                --auth-danger: #fda4af;
-                --auth-success-bg: rgba(34, 197, 94, 0.14);
-                --auth-success-border: rgba(74, 222, 128, 0.35);
-                --auth-success-text: #bbf7d0;
-            }
+    <style>
+        /* ═══════════════════════════════════════════════════════ */
+        /* ██  GUEST AUTH SHELL — Premium Full-Screen Layout    ██ */
+        /* ═══════════════════════════════════════════════════════ */
 
-            body {
-                margin: 0;
-                font-family: 'Inter', system-ui, -apple-system, sans-serif;
-                color: var(--auth-text-main);
-                background: var(--auth-bg-start);
-            }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
 
-            .auth-page {
-                position: relative;
-                min-height: 100vh;
-                overflow: hidden;
-                background:
-                    radial-gradient(900px 460px at 14% 20%, rgba(96, 165, 250, 0.18), transparent 62%),
-                    radial-gradient(760px 420px at 86% 16%, rgba(129, 140, 248, 0.2), transparent 64%),
-                    linear-gradient(130deg, var(--auth-bg-start), var(--auth-bg-end));
-            }
+        body.auth-body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
 
-            .auth-page::before,
-            .auth-page::after {
-                content: '';
-                position: absolute;
-                pointer-events: none;
-            }
+        /* ── Full-screen split layout ── */
+        .auth-shell {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+        }
 
-            .auth-page::before {
-                width: 440px;
-                height: 440px;
-                border-radius: 999px;
-                right: -120px;
-                bottom: -160px;
-                background: radial-gradient(circle, rgba(99, 102, 241, 0.2), transparent 68%);
-            }
-
-            .auth-page::after {
-                inset: 0;
-                background-image: linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-                background-size: 34px 34px;
-                mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
-            }
-
+        @media (min-width: 1024px) {
             .auth-shell {
-                width: min(1120px, 95vw);
-                min-height: 95vh;
-                margin: 0 auto;
-                display: grid;
-                grid-template-columns: 1.08fr 1fr;
-                align-items: center;
-                gap: 2.5rem;
-                position: relative;
-                z-index: 2;
-                padding: 2rem 0;
+                grid-template-columns: 1fr 1fr;
             }
+        }
 
-            .auth-brand {
-                padding: 2rem;
+        @media (min-width: 1280px) {
+            .auth-shell {
+                grid-template-columns: 55fr 45fr;
             }
+        }
 
-            .auth-brand-top {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.85rem;
-                margin-bottom: 1.35rem;
-            }
+        /* ── Left Panel: Cinematic Hero ── */
+        .auth-hero {
+            display: none;
+            position: relative;
+            overflow: hidden;
+            background: #070b18;
+        }
 
-            .auth-brand-logo {
-                width: 3.15rem;
-                height: 3.15rem;
-                border-radius: 0.95rem;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                background: linear-gradient(145deg, #5b6fff, #8b5cf6);
-                box-shadow: 0 16px 24px rgba(79, 70, 229, 0.35);
-            }
-
-            .auth-brand-name {
-                font-size: 1.85rem;
-                font-weight: 800;
-                letter-spacing: -0.02em;
-                color: #ffffff;
-                line-height: 1.05;
-            }
-
-            .auth-brand-kicker {
-                font-size: 0.78rem;
-                font-weight: 700;
-                letter-spacing: 0.12em;
-                text-transform: uppercase;
-                color: var(--auth-accent-soft);
-            }
-
-            .auth-brand-copy {
-                margin-top: 1.15rem;
-                max-width: 30rem;
-                color: var(--auth-text-muted);
-                line-height: 1.65;
-                font-size: 0.95rem;
-            }
-
-            .auth-brand-list {
-                margin-top: 1.4rem;
-                display: grid;
-                gap: 0.65rem;
-            }
-
-            .auth-brand-list-item {
+        @media (min-width: 1024px) {
+            .auth-hero {
                 display: flex;
-                align-items: center;
-                gap: 0.6rem;
-                color: var(--auth-text-faint);
-                font-size: 0.86rem;
-                font-weight: 600;
+                flex-direction: column;
+                justify-content: center;
+                padding: 64px;
             }
+        }
 
-            .auth-dot {
-                width: 0.48rem;
-                height: 0.48rem;
-                border-radius: 999px;
-                background: linear-gradient(145deg, #93c5fd, #818cf8);
-                box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.16);
+        @media (min-width: 1440px) {
+            .auth-hero {
+                padding: 80px 96px;
             }
+        }
 
+        .auth-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(900px 600px at 20% 30%, rgba(99, 102, 241, 0.18), transparent 60%),
+                radial-gradient(700px 500px at 80% 70%, rgba(139, 92, 246, 0.12), transparent 55%),
+                radial-gradient(500px 400px at 50% 90%, rgba(59, 130, 246, 0.1), transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .auth-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 1px,
+                    rgba(255, 255, 255, 0.012) 1px,
+                    rgba(255, 255, 255, 0.012) 2px
+                );
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .auth-hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 560px;
+        }
+
+        .auth-hero-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 56px;
+        }
+
+        .auth-hero-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 12px 28px -8px rgba(99, 102, 241, 0.5);
+            flex-shrink: 0;
+        }
+
+        .auth-hero-logo svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .auth-hero-app-name {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+
+        .auth-hero-app-sub {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: #818cf8;
+            margin-top: 2px;
+        }
+
+        .auth-hero-headline {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            color: #f8fafc;
+            margin: 0 0 20px;
+        }
+
+        .auth-hero-headline span {
+            background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .auth-hero-desc {
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.7;
+            color: #94a3b8;
+            margin: 0 0 48px;
+            max-width: 480px;
+        }
+
+        /* ── Feature Highlights ── */
+        .auth-hero-features {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .auth-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 18px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s ease;
+        }
+
+        .auth-feature:hover {
+            background: rgba(99, 102, 241, 0.06);
+            border-color: rgba(129, 140, 248, 0.18);
+            transform: translateX(4px);
+        }
+
+        .auth-feature-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .auth-feature-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .auth-feature-icon.indigo  { background: rgba(99, 102, 241, 0.14); color: #818cf8; }
+        .auth-feature-icon.emerald { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+        .auth-feature-icon.amber   { background: rgba(245, 158, 11, 0.14); color: #fbbf24; }
+
+        .auth-feature-text h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #e2e8f0;
+            letter-spacing: -0.01em;
+        }
+
+        .auth-feature-text p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        /* ── Floating Orb Decorations ── */
+        .auth-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+            z-index: 0;
+            pointer-events: none;
+            animation: auth-orb-drift 18s ease-in-out infinite alternate;
+        }
+
+        .auth-orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #6366f1;
+            top: -120px;
+            right: -80px;
+            animation-delay: 0s;
+        }
+
+        .auth-orb-2 {
+            width: 300px;
+            height: 300px;
+            background: #8b5cf6;
+            bottom: -60px;
+            left: -40px;
+            animation-delay: -6s;
+        }
+
+        @keyframes auth-orb-drift {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(20px, -15px) scale(1.05); }
+            100% { transform: translate(-10px, 10px) scale(0.97); }
+        }
+
+        /* ── Right Panel: Auth Form ── */
+        .auth-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 24px;
+            background: #0b1120;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
             .auth-panel {
-                display: flex;
-                justify-content: center;
-                width: 100%;
+                padding: 48px 40px;
             }
+        }
 
-            .auth-card {
-                width: min(470px, 100%);
-                border-radius: 1.15rem;
-                border: 1px solid var(--auth-border);
-                background: linear-gradient(160deg, rgba(19, 29, 56, 0.9), var(--auth-surface));
-                backdrop-filter: blur(14px);
-                box-shadow: 0 24px 48px rgba(5, 10, 30, 0.5);
-                padding: 2rem;
+        @media (min-width: 1024px) {
+            .auth-panel {
+                padding: 48px 56px;
+                border-left: 1px solid rgba(255, 255, 255, 0.04);
             }
+        }
 
+        .auth-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+        }
+
+        .auth-panel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(600px 400px at 50% 30%, rgba(99, 102, 241, 0.04), transparent 60%);
+            pointer-events: none;
+        }
+
+        /* ── Mobile Brand (shown < 1024px) ── */
+        .auth-mobile-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 36px;
+        }
+
+        @media (min-width: 1024px) {
+            .auth-mobile-brand {
+                display: none;
+            }
+        }
+
+        .auth-mobile-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 10px 24px -6px rgba(99, 102, 241, 0.45);
+        }
+
+        .auth-mobile-logo svg {
+            width: 22px;
+            height: 22px;
+            color: white;
+        }
+
+        .auth-mobile-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+
+        /* ── Form Card ── */
+        .auth-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* ── Typography ── */
+        .auth-title {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: #f8fafc;
+            margin: 0 0 8px;
+        }
+
+        .auth-subtitle {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.6;
+            color: #64748b;
+            margin: 0 0 28px;
+        }
+
+        /* ── Status & Error Banners ── */
+        .auth-status {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6ee7b7;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            margin-bottom: 20px;
+        }
+
+        /* ── Pill Row ── */
+        .auth-pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .auth-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #c7d2fe;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(129, 140, 248, 0.2);
+        }
+
+        /* ── Form ── */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .auth-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .auth-field-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        @media (min-width: 480px) {
+            .auth-field-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .auth-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #cbd5e1;
+            letter-spacing: 0.02em;
+        }
+
+        .auth-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-input-icon {
+            position: absolute;
+            left: 14px;
+            width: 18px;
+            height: 18px;
+            color: #475569;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .auth-input-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.6);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .auth-input-has-icon {
+            padding-left: 44px;
+        }
+
+        .auth-input::placeholder {
+            color: #475569;
+            font-weight: 400;
+        }
+
+        .auth-input:focus {
+            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-input:focus + .auth-input-icon,
+        .auth-input:focus ~ .auth-input-icon {
+            color: #818cf8;
+        }
+
+        .auth-input-wrap:focus-within .auth-input-icon {
+            color: #818cf8;
+        }
+
+        .auth-hint {
+            margin: 2px 0 0;
+            font-size: 11px;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        .auth-error {
+            margin: 2px 0 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fb7185;
+        }
+
+        /* ── Checkbox & Row ── */
+        .auth-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .auth-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .auth-check input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border-radius: 5px;
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.6);
+            cursor: pointer;
+            accent-color: #6366f1;
+        }
+
+        /* ── Links ── */
+        .auth-link {
+            font-size: 12px;
+            font-weight: 600;
+            color: #818cf8;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+
+        .auth-link:hover {
+            color: #a5b4fc;
+            text-decoration: underline;
+        }
+
+        /* ── Submit Button ── */
+        .auth-submit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 24px;
+            margin-top: 4px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: white;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+            box-shadow:
+                0 10px 24px -8px rgba(99, 102, 241, 0.5),
+                0 2px 6px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-submit::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 50%);
+            pointer-events: none;
+        }
+
+        .auth-submit:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                0 16px 32px -8px rgba(99, 102, 241, 0.55),
+                0 4px 10px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .auth-submit:active {
+            transform: translateY(0);
+            box-shadow:
+                0 6px 14px -4px rgba(99, 102, 241, 0.4),
+                inset 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ── Footnote ── */
+        .auth-footnote {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        /* ── Footer ── */
+        .auth-footer {
+            position: relative;
+            z-index: 1;
+            margin-top: 48px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .auth-footer a {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-footer a:hover {
+            color: #818cf8;
+        }
+
+        .auth-footer-redm span {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        /* ── Security Signal ── */
+        .auth-security-signal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #334155;
+        }
+
+        .auth-security-signal svg {
+            width: 12px;
+            height: 12px;
+            color: #16a34a;
+        }
+
+        /* ═══════════════════════════════════════════════════════ */
+        /* ██  RESPONSIVE — Mobile First Polish                ██ */
+        /* ═══════════════════════════════════════════════════════ */
+
+        @media (max-width: 639px) {
             .auth-title {
-                margin: 0;
-                font-size: 1.65rem;
-                font-weight: 800;
-                color: #ffffff;
-                letter-spacing: -0.02em;
+                font-size: 22px;
             }
 
-            .auth-subtitle {
-                margin: 0.45rem 0 1.3rem;
-                color: var(--auth-text-muted);
-                font-size: 0.92rem;
-                line-height: 1.55;
+            .auth-hero-headline {
+                font-size: 28px;
             }
+        }
+    </style>
+</head>
 
-            .auth-status {
-                margin-bottom: 1rem;
-                border-radius: 0.7rem;
-                padding: 0.7rem 0.85rem;
-                border: 1px solid var(--auth-success-border);
-                background: var(--auth-success-bg);
-                color: var(--auth-success-text);
-                font-size: 0.83rem;
-                font-weight: 600;
-            }
+<body class="auth-body">
+    <div class="auth-shell">
+        {{-- ══ LEFT: Cinematic Hero Panel ══ --}}
+        <div class="auth-hero">
+            <div class="auth-orb auth-orb-1"></div>
+            <div class="auth-orb auth-orb-2"></div>
 
-            .auth-form {
-                display: grid;
-                gap: 0.95rem;
-            }
+            <div class="auth-hero-content">
+                <div class="auth-hero-brand">
+                    <div class="auth-hero-logo">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="auth-hero-app-name">{{ config('app.name', 'BOB System') }}</div>
+                        <div class="auth-hero-app-sub">Reconciliation Engine</div>
+                    </div>
+                </div>
 
-            .auth-field {
-                display: grid;
-                gap: 0.42rem;
-            }
+                <h1 class="auth-hero-headline">
+                    
+                    <span>Reconciliation</span><br>
+                    Intelligence
+                </h1>
 
-            .auth-label {
-                font-size: 0.78rem;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-                text-transform: uppercase;
-                color: #cbd5f2;
-            }
+                <p class="auth-hero-desc">
+                    Automated carrier-to-agent matching, commission governance,
+                    and compliance reporting — unified in a single secure workspace.
+                </p>
 
-            .auth-input {
-                width: 100%;
-                border-radius: 0.74rem;
-                border: 1px solid var(--auth-input-border);
-                background: var(--auth-input-bg);
-                color: var(--auth-text-main);
-                font-size: 0.94rem;
-                padding: 0.78rem 0.88rem;
-                transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
-            }
-
-            .auth-input::placeholder {
-                color: #7f8aaa;
-            }
-
-            .auth-input:focus {
-                outline: none;
-                border-color: var(--auth-accent);
-                box-shadow: 0 0 0 3px rgba(127, 139, 255, 0.2);
-                background: rgba(15, 24, 50, 0.85);
-            }
-
-            .auth-input:-webkit-autofill,
-            .auth-input:-webkit-autofill:hover,
-            .auth-input:-webkit-autofill:focus {
-                -webkit-text-fill-color: var(--auth-text-main);
-                -webkit-box-shadow: 0 0 0 30px #18213f inset;
-                transition: background-color 5000s ease-in-out 0s;
-            }
-
-            .auth-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 0.9rem;
-                flex-wrap: wrap;
-                margin-top: 0.2rem;
-            }
-
-            .auth-check {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                color: var(--auth-text-muted);
-                font-size: 0.86rem;
-                font-weight: 600;
-                user-select: none;
-            }
-
-            .auth-check input {
-                width: 0.95rem;
-                height: 0.95rem;
-                border-radius: 0.25rem;
-                border: 1px solid var(--auth-input-border);
-                accent-color: var(--auth-accent);
-                background: rgba(15, 23, 42, 0.9);
-            }
-
-            .auth-link {
-                color: var(--auth-accent-soft);
-                text-decoration: none;
-                font-size: 0.86rem;
-                font-weight: 600;
-                transition: color 0.15s ease;
-            }
-
-            .auth-link:hover {
-                color: #e0e7ff;
-                text-decoration: underline;
-            }
-
-            .auth-submit {
-                margin-top: 0.25rem;
-                width: 100%;
-                border: none;
-                border-radius: 0.74rem;
-                padding: 0.82rem 0.95rem;
-                background: linear-gradient(135deg, #6475ff, #8b5cf6);
-                color: #ffffff;
-                font-size: 0.78rem;
-                font-weight: 800;
-                letter-spacing: 0.09em;
-                text-transform: uppercase;
-                cursor: pointer;
-                box-shadow: 0 10px 20px rgba(79, 70, 229, 0.35);
-                transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
-            }
-
-            .auth-submit:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 14px 24px rgba(79, 70, 229, 0.42);
-                filter: brightness(1.03);
-            }
-
-            .auth-submit:focus-visible {
-                outline: none;
-                box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.4), 0 14px 24px rgba(79, 70, 229, 0.42);
-            }
-
-            .auth-error {
-                margin: 0.1rem 0 0;
-                color: var(--auth-danger);
-                font-size: 0.79rem;
-                font-weight: 600;
-            }
-
-            .auth-footnote {
-                margin-top: 1rem;
-                text-align: center;
-                color: var(--auth-text-faint);
-                font-size: 0.84rem;
-                font-weight: 600;
-            }
-
-            .auth-security {
-                margin-top: 1rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.45rem;
-                color: var(--auth-text-faint);
-                opacity: 0.95;
-                font-size: 0.78rem;
-                font-weight: 600;
-            }
-
-            @media (max-width: 1024px) {
-                .auth-shell {
-                    grid-template-columns: 1fr;
-                    align-content: center;
-                    gap: 1.25rem;
-                    padding: 1.25rem 0 1.5rem;
-                }
-
-                .auth-brand {
-                    padding: 1rem 0.5rem 0;
-                    text-align: center;
-                }
-
-                .auth-brand-top {
-                    justify-content: center;
-                }
-
-                .auth-brand-copy,
-                .auth-brand-list {
-                    display: none;
-                }
-
-                .auth-card {
-                    padding: 1.5rem 1.25rem;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="auth-page">
-            <main class="auth-shell">
-                <section class="auth-brand">
-                    <a href="/" class="auth-brand-top" aria-label="BOB System Home">
-                        <span class="auth-brand-logo" aria-hidden="true">
-                            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                <div class="auth-hero-features">
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon indigo">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                             </svg>
-                        </span>
-                        <span>
-                            <span class="auth-brand-name">BOB System</span>
-                            <span class="auth-brand-kicker">Secure Platform Access</span>
-                        </span>
-                    </a>
-
-                    <p class="auth-brand-copy">
-                        Access enterprise reconciliation workflows with secure identity controls, complete audit traceability, and role-based operations for production teams.
-                    </p>
-
-                    <div class="auth-brand-list" aria-hidden="true">
-                        <div class="auth-brand-list-item"><span class="auth-dot"></span>Centralized reconciliation and reporting workspace</div>
-                        <div class="auth-brand-list-item"><span class="auth-dot"></span>Role-aware controls for operational governance</div>
-                        <div class="auth-brand-list-item"><span class="auth-dot"></span>Encrypted sessions with monitored access lifecycle</div>
+                        </div>
+                        <div class="auth-feature-text">
+                            <h4>Multi-Feed ETL Engine</h4>
+                            <p>Stream-process IMS, Health Sherpa, and carrier BOB feeds with intelligent tiered matching.</p>
+                        </div>
                     </div>
-                </section>
 
-                <section class="auth-panel">
-                    <div class="auth-card">
-                        {{ $slot }}
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon emerald">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
+                        </div>
+                        <div class="auth-feature-text">
+                            <h4>Role-Governed Access</h4>
+                            <p>Fine-grained RBAC with per-action permissions, audit trails, and super-admin governance.</p>
+                        </div>
                     </div>
-                </section>
-            </main>
 
-            <div class="auth-security" role="status" aria-live="polite">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-                Secure 256-bit encrypted connection
+                    <div class="auth-feature">
+                        <div class="auth-feature-icon amber">
+                            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+                            </svg>
+                        </div>
+                        <div class="auth-feature-text">
+                            <h4>Commission Intelligence</h4>
+                            <p>Contract patching, locklist impact analysis, and real-time commission dashboards.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </body>
+
+        {{-- ══ RIGHT: Auth Form Panel ══ --}}
+        <div class="auth-panel">
+            {{-- Mobile-only brand --}}
+            <div class="auth-mobile-brand">
+                <div class="auth-mobile-logo">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                </div>
+                <span class="auth-mobile-name">{{ config('app.name', 'BOB System') }}</span>
+            </div>
+
+            <div class="auth-card">
+                {{ $slot }}
+
+                {{-- Security Signal --}}
+                <div class="auth-security-signal">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    <span>256-bit encrypted session · CSRF protected</span>
+                </div>
+
+                @php
+                    $developerName = config('branding.developed_by');
+                    $developerUrl = config('branding.developed_by_url');
+                    $isRedMindBrand = strcasecmp((string) $developerName, 'RedMind Technologies') === 0;
+                @endphp
+
+                <div class="auth-footer">
+                    <div>
+                        Developed by
+                        <a href="{{ $developerUrl }}" target="_blank" rel="noopener noreferrer">
+                            @if ($isRedMindBrand)
+                                <span class="auth-footer-redm"><span>R</span>ed<span>M</span>ind Technologies</span>
+                            @else
+                                {{ $developerName }}
+                            @endif
+                        </a>
+                    </div>
+                    <div>© {{ date('Y') }} {{ config('branding.copyright_holder') }} · v{{ config('branding.version') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
 </html>

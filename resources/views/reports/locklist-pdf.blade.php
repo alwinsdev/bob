@@ -48,7 +48,7 @@
     </table>
 
     <div class="footer">
-        ENS Environmental Consultancy - Lock List Authority. Page <span class="pagenum"></span>
+        BOB - Lock List Authority. Page <span class="pagenum"></span>
     </div>
 </body>
 </html>
