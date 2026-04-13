@@ -9,7 +9,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -94,7 +94,7 @@
     <aside class="bob-sidebar">
         <div class="bob-sidebar-brand">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
-                style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                style="background: linear-gradient(135deg, #2456d8, #0891b2);">
                 <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
@@ -283,7 +283,7 @@
                 <button @click="userMenu = !userMenu" title="User Menu"
                     class="bob-sidebar-user-trigger w-full flex items-center gap-3 group cursor-pointer">
                     <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shadow-lg shrink-0"
-                        style="background: linear-gradient(135deg, #6366f1, #a855f7); color: white;">
+                        style="background: linear-gradient(135deg, #2456d8, #0891b2); color: white;">
                         {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
                     </div>
                     <div class="bob-sidebar-user-meta flex-1 min-w-0 text-left">
@@ -306,13 +306,11 @@
                     x-transition:leave="transition ease-in duration-100"
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 translate-y-2" @click.outside="userMenu = false"
-                    class="bob-sidebar-user-menu absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden shadow-2xl"
-                    style="background: #1e1b4b; border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(20px);">
+                    class="bob-sidebar-user-menu absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden">
 
-                    <div class="px-4 py-3 flex items-center gap-3"
-                        style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                    <div class="bob-sidebar-user-menu-header px-4 py-3 flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
-                            style="background: linear-gradient(135deg, #6366f1, #a855f7); color: white; border: 2px solid rgba(255,255,255,0.1);">
+                            style="background: linear-gradient(135deg, #2456d8, #0891b2); color: white; border: 2px solid rgba(255,255,255,0.1);">
                             {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
                         </div>
                         <div class="min-w-0">
@@ -323,8 +321,8 @@
 
                     <div class="py-1.5">
                         <a href="{{ route('reconciliation.settings') }}?tab=profile"
-                            class="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-indigo-100/70 hover:text-white hover:bg-white/8 transition-all">
-                            <svg class="w-4 h-4 text-indigo-200/50" fill="none" viewBox="0 0 24 24"
+                            class="bob-sidebar-user-menu-link">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -332,8 +330,8 @@
                             My Profile
                         </a>
                         <a href="{{ route('reconciliation.settings') }}?tab=security"
-                            class="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-indigo-100/70 hover:text-white hover:bg-white/8 transition-all">
-                            <svg class="w-4 h-4 text-indigo-200/50" fill="none" viewBox="0 0 24 24"
+                            class="bob-sidebar-user-menu-link">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -342,13 +340,11 @@
                         </a>
 
                         <div class="px-4 pt-2 pb-1">
-                            <div class="text-[10px] uppercase tracking-wider font-bold text-indigo-200/50">Theme</div>
+                            <div class="bob-sidebar-user-menu-section-label">Theme</div>
                             <div class="mt-2 grid grid-cols-2 gap-2">
                                 <button type="button" @click="setTheme('dark')"
-                                    class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all"
-                                    :class="theme === 'dark'
-                                                ? 'bg-white/12 text-white border-white/20'
-                                                : 'bg-transparent text-indigo-100/70 border-white/10 hover:bg-white/8'">
+                                    class="bob-theme-toggle-btn"
+                                    :class="{ 'active': theme === 'dark' }">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -357,10 +353,8 @@
                                     Dark
                                 </button>
                                 <button type="button" @click="setTheme('light')"
-                                    class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all"
-                                    :class="theme === 'light'
-                                                ? 'bg-white/12 text-white border-white/20'
-                                                : 'bg-transparent text-indigo-100/70 border-white/10 hover:bg-white/8'">
+                                    class="bob-theme-toggle-btn"
+                                    :class="{ 'active': theme === 'light' }">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -372,11 +366,11 @@
                         </div>
                     </div>
 
-                    <div class="py-1.5" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                    <div class="py-1.5 bob-sidebar-user-menu-footer">
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit"
-                                class="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 transition-all">
+                                class="bob-sidebar-user-menu-link bob-sidebar-user-menu-link-danger w-full">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="1.5">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -411,8 +405,7 @@
                 @endisset
                 <div x-data="{ time: '' }"
                     x-init="setInterval(() => { time = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}); }, 1000)"
-                    class="bob-topbar-clock text-[11px] font-mono font-semibold px-3 py-1.5 rounded-lg"
-                    style="background: var(--bob-bg-input); border: 1px solid var(--bob-border-light); color: var(--bob-text-muted)">
+                    class="bob-topbar-clock bob-topbar-chip text-[11px] font-mono font-semibold px-3 py-1.5 rounded-lg">
                     <span x-text="time"></span>
                 </div>
             </div>
@@ -428,8 +421,8 @@
                 $developerUrl = config('branding.developed_by_url');
                 $isRedMindBrand = strcasecmp((string) $developerName, 'RedMind Technologies') === 0;
             @endphp
-            <div class="rounded-xl px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-1.5 text-xs"
-                style="background: var(--bob-bg-card); border: 1px solid var(--bob-border-light); color: var(--bob-text-faint);">
+            <div class="bob-footer-panel rounded-xl px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-1.5 text-xs"
+                style="color: var(--bob-text-faint);">
                 <div>
                     Developed by
                     <a href="{{ $developerUrl }}" target="_blank" rel="noopener noreferrer" class="font-semibold hover:underline" style="color: var(--bob-text-primary);">

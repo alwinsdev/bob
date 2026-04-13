@@ -46,19 +46,19 @@ class AccessControlController extends Controller
             });
         }
 
-        $roles         = $rolesQuery->get();
-        $permissions   = Permission::query()->orderBy('name')->get(['id', 'name']);
-        $allRoles      = Role::query()->with('permissions:id,name')->orderBy('name')->get();
+        $roles = $rolesQuery->get();
+        $permissions = Permission::query()->orderBy('name')->get(['id', 'name']);
+        $allRoles = Role::query()->with('permissions:id,name')->orderBy('name')->get();
 
         return view('reconciliation.access-control', [
-            'roles'               => $roles,
-            'permissions'         => $permissions,
-            'assignableRoles'     => $assignableRolesQuery->get(['id', 'name']),
-            'users'               => $usersQuery->get(['id', 'name', 'email']),
-            'isSuperAdmin'        => $isSuperAdmin,
-            'superAdminRoleName'  => self::SUPER_ADMIN_ROLE,
-            'screenAccessMatrix'  => $this->buildScreenAccessMatrix($allRoles),
-            'roleHierarchy'       => $this->buildRoleHierarchy($allRoles),
+            'roles' => $roles,
+            'permissions' => $permissions,
+            'assignableRoles' => $assignableRolesQuery->get(['id', 'name']),
+            'users' => $usersQuery->get(['id', 'name', 'email']),
+            'isSuperAdmin' => $isSuperAdmin,
+            'superAdminRoleName' => self::SUPER_ADMIN_ROLE,
+            'screenAccessMatrix' => $this->buildScreenAccessMatrix($allRoles),
+            'roleHierarchy' => $this->buildRoleHierarchy($allRoles),
         ]);
     }
 
@@ -121,14 +121,14 @@ class AccessControlController extends Controller
         $isSuperAdminActor = $this->isSuperAdminUser($actor);
 
         $requestedRoles = collect($request->validated('role_names', []))
-            ->filter(fn ($roleName) => is_string($roleName) && trim($roleName) !== '')
-            ->map(fn (string $roleName) => trim($roleName))
+            ->filter(fn($roleName) => is_string($roleName) && trim($roleName) !== '')
+            ->map(fn(string $roleName) => trim($roleName))
             ->unique()
             ->values();
 
         $targetIsSuperAdmin = $this->isSuperAdminUser($user);
         $assignsSuperAdmin = $requestedRoles
-            ->contains(fn (string $roleName) => $this->isSuperAdminRoleName($roleName));
+            ->contains(fn(string $roleName) => $this->isSuperAdminRoleName($roleName));
 
         if (!$isSuperAdminActor && $targetIsSuperAdmin) {
             abort(403, 'Only super administrators can modify users with super_admin access.');
@@ -159,14 +159,14 @@ class AccessControlController extends Controller
 
     private function isSuperAdminUser(User $user): bool
     {
-        return $user->roles->contains(fn (Role $role) => $this->isSuperAdminRoleName((string) $role->name));
+        return $user->roles->contains(fn(Role $role) => $this->isSuperAdminRoleName((string) $role->name));
     }
 
     private function normalizePermissionNames(array $permissionNames): array
     {
         return collect($permissionNames)
-            ->filter(fn ($permissionName) => is_string($permissionName) && trim($permissionName) !== '')
-            ->map(fn (string $permissionName) => trim($permissionName))
+            ->filter(fn($permissionName) => is_string($permissionName) && trim($permissionName) !== '')
+            ->map(fn(string $permissionName) => trim($permissionName))
             ->unique()
             ->values()
             ->all();
@@ -185,34 +185,34 @@ class AccessControlController extends Controller
     {
         // [screen label, friendly route/URL, permission required]
         $screens = [
-            ['Executive Home',              '/reconciliation/home',                          'reconciliation.view'],
-            ['Reconciliation Dashboard',    '/reconciliation/',                              'reconciliation.view'],
-            ['Dashboard Export',            '/reconciliation/export',                        'reconciliation.export.download'],
-            ['Import Feeds (Upload)',        '/reconciliation/upload',                        'reconciliation.etl.run'],
-            ['Run ETL Upload',              'POST /reconciliation/upload',                   'reconciliation.etl.run'],
-            ['Rerun Batch',                 'POST /ops/runs/{id}/reanalysis',                'reconciliation.reanalysis.run'],
-            ['Download Batch Output',       '/reconciliation/batches/{id}/download',         'reconciliation.export.download'],
-            ['Delete Batch',                'DELETE /reconciliation/batches/{id}',           'reconciliation.delete'],
-            ['Contract Patch Upload',       'POST /reconciliation/contract-patch',           'reconciliation.etl.run'],
-            ['Contract Patch Download',     '/reconciliation/contract-patch/{id}/download',  'reconciliation.export.download'],
-            ['Contract Patch Delete',       'DELETE /reconciliation/contract-patch/{id}',    'reconciliation.delete'],
-            ['Lock/Unlock/Resolve/Flag',    'POST /reconciliation/records/{id}/...',         'reconciliation.edit'],
-            ['Bulk Resolve',                'POST /reconciliation/records/bulk-resolve',     'reconciliation.bulk_approve'],
-            ['Bulk Promote to LockList',    'POST /reconciliation/records/bulk-promote-...',  'reconciliation.bulk_approve'],
-            ['Audit Logs',                  '/reconciliation/audit-logs',                    'reconciliation.bulk_approve'],
-            ['Lock List (view)',             '/reconciliation/locklist',                      'reconciliation.view'],
-            ['Lock List Export',             '/reconciliation/locklist/export',               'reconciliation.export.download'],
-            ['Lock List Create/Update',      'POST/PUT /reconciliation/locklist',             'reconciliation.bulk_approve'],
-            ['Lock List Delete',             'DELETE /reconciliation/locklist/{id}',          'reconciliation.delete'],
-            ['Batch Results',               '/reconciliation/batches/{id}/results',           'reconciliation.results.view'],
-            ['Commission Dashboard',        '/reconciliation/commission-dashboard',           'reconciliation.results.view'],
-            ['Final BOB View & Export',      '/reconciliation/final-bob',                     'reconciliation.results.view'],
-            ['Final BOB Export',             '/reconciliation/final-bob/export',              'reconciliation.export.download'],
-            ['Contract Patch Ledger',        '/reconciliation/contract-patch-ledger',         'reconciliation.results.view'],
-            ['Locklist Impact View',         '/reconciliation/locklist-impact',               'reconciliation.results.view'],
-            ['Locklist Impact Export',       '/reconciliation/locklist-impact/export',        'reconciliation.export.download'],
-            ['Settings',                    '/reconciliation/settings',                      'reconciliation.view'],
-            ['Access Control',              '/reconciliation/access-control',                'access.manage'],
+            ['Executive Home', '/reconciliation/home', 'reconciliation.view'],
+            ['Reconciliation Dashboard', '/reconciliation/', 'reconciliation.view'],
+            ['Dashboard Export', '/reconciliation/export', 'reconciliation.export.download'],
+            ['Import Feeds (Upload)', '/reconciliation/upload', 'reconciliation.etl.run'],
+            ['Run ETL Upload', 'POST /reconciliation/upload', 'reconciliation.etl.run'],
+            ['Rerun Batch', 'POST /ops/runs/{id}/reanalysis', 'reconciliation.reanalysis.run'],
+            ['Download Batch Output', '/reconciliation/batches/{id}/download', 'reconciliation.export.download'],
+            ['Delete Batch', 'DELETE /reconciliation/batches/{id}', 'reconciliation.delete'],
+            ['Contract Patch Upload', 'POST /reconciliation/contract-patch', 'reconciliation.etl.run'],
+            ['Contract Patch Download', '/reconciliation/contract-patch/{id}/download', 'reconciliation.export.download'],
+            ['Contract Patch Delete', 'DELETE /reconciliation/contract-patch/{id}', 'reconciliation.delete'],
+            ['Lock/Unlock/Resolve/Flag', 'POST /reconciliation/records/{id}/...', 'reconciliation.edit'],
+            ['Bulk Resolve', 'POST /reconciliation/records/bulk-resolve', 'reconciliation.bulk_approve'],
+            ['Bulk Promote to LockList', 'POST /reconciliation/records/bulk-promote-...', 'reconciliation.bulk_approve'],
+            ['Audit Logs', '/reconciliation/audit-logs', 'reconciliation.bulk_approve'],
+            ['Lock List (view)', '/reconciliation/locklist', 'reconciliation.view'],
+            ['Lock List Export', '/reconciliation/locklist/export', 'reconciliation.export.download'],
+            ['Lock List Create/Update', 'POST/PUT /reconciliation/locklist', 'reconciliation.bulk_approve'],
+            ['Lock List Delete', 'DELETE /reconciliation/locklist/{id}', 'reconciliation.delete'],
+            ['Batch Results', '/reconciliation/batches/{id}/results', 'reconciliation.results.view'],
+            ['Commission Dashboard', '/reconciliation/commission-dashboard', 'reconciliation.results.view'],
+            ['Final BOB View & Export', '/reconciliation/final-bob', 'reconciliation.results.view'],
+            ['Final BOB Export', '/reconciliation/final-bob/export', 'reconciliation.export.download'],
+            ['Contract Patch Ledger', '/reconciliation/contract-patch-ledger', 'reconciliation.results.view'],
+            ['Locklist Impact View', '/reconciliation/locklist-impact', 'reconciliation.results.view'],
+            ['Locklist Impact Export', '/reconciliation/locklist-impact/export', 'reconciliation.export.download'],
+            ['Settings', '/reconciliation/settings', 'reconciliation.view'],
+            ['Access Control', '/reconciliation/access-control', 'access.manage'],
         ];
 
         $matrix = [];
@@ -226,10 +226,10 @@ class AccessControlController extends Controller
                 $roleAccess[$role->name] = $hasPermission;
             }
             $matrix[] = [
-                'screen'     => $screen,
-                'route'      => $this->maskTechnicalRoute($route),
+                'screen' => $screen,
+                'route' => $this->maskTechnicalRoute($route),
                 'permission' => $permission,
-                'roles'      => $roleAccess,
+                'roles' => $roleAccess,
             ];
         }
 
@@ -259,20 +259,20 @@ class AccessControlController extends Controller
     private function buildRoleHierarchy(\Illuminate\Support\Collection $allRoles): array
     {
         $descriptions = [
-            'super_admin'           => 'Unrestricted authority. Bypasses all authorization gates. Reserved for platform ownership only.',
-            'admin'                 => 'Full reconciliation management. Can run ETL, approve and delete. Cannot modify identity governance.',
-            'Manager'               => 'Operational ownership. Can run ETL/reanalysis, bulk approve, manage lock list, and export. Cannot delete runs or manage access.',
-            'Reconciliation_Analyst'=> 'Analyst scope. Can view/edit records and review reporting outputs. Cannot run ETL/reanalysis, bulk approve, export, or delete.',
+            'super_admin' => 'Unrestricted authority. Bypasses all authorization gates. Reserved for platform ownership only.',
+            'admin' => 'Full reconciliation management. Can run ETL, approve and delete. Cannot modify identity governance.',
+            'Manager' => 'Operational ownership. Can run ETL/reanalysis, bulk approve, manage lock list, and export. Cannot delete runs or manage access.',
+            'Reconciliation_Analyst' => 'Analyst scope. Can view/edit records and review reporting outputs. Cannot run ETL/reanalysis, bulk approve, export, or delete.',
         ];
 
         return $allRoles->map(function (Role $role) use ($descriptions) {
             return [
-                'name'             => $role->name,
-                'description'      => $descriptions[$role->name] ?? 'Custom operational role.',
-                'user_count'       => $role->users()->count(),
+                'name' => $role->name,
+                'description' => $descriptions[$role->name] ?? 'Custom operational role.',
+                'user_count' => $role->users()->count(),
                 'permission_count' => $role->permissions->count(),
-                'permissions'      => $role->permissions->pluck('name')->sort()->values()->all(),
-                'is_super_admin'   => $this->isSuperAdminRoleName((string) $role->name),
+                'permissions' => $role->permissions->pluck('name')->sort()->values()->all(),
+                'is_super_admin' => $this->isSuperAdminRoleName((string) $role->name),
             ];
         })->values()->all();
     }

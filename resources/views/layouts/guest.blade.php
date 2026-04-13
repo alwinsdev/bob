@@ -10,7 +10,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -29,7 +29,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: var(--bob-font-sans, 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
@@ -476,7 +476,7 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             background: rgba(15, 23, 42, 0.6);
             color: #f8fafc;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--bob-font-sans, 'Plus Jakarta Sans', sans-serif);
             font-size: 14px;
             font-weight: 500;
             outline: none;
@@ -575,7 +575,7 @@
             margin-top: 4px;
             border: none;
             border-radius: 12px;
-            font-family: 'Inter', sans-serif;
+            font-family: var(--bob-font-sans, 'Plus Jakarta Sans', sans-serif);
             font-size: 14px;
             font-weight: 700;
             letter-spacing: 0.01em;
@@ -668,6 +668,187 @@
             width: 12px;
             height: 12px;
             color: #16a34a;
+        }
+
+        /* ═══════════════════════════════════════════════════════ */
+        /* ██  LIGHT THEME — Guest Shell                        ██ */
+        /* ═══════════════════════════════════════════════════════ */
+
+        html.bob-light body.auth-body {
+            background:
+                radial-gradient(920px 460px at 12% -4%, rgba(37, 99, 235, 0.12), transparent 56%),
+                radial-gradient(840px 480px at 86% -12%, rgba(8, 145, 178, 0.1), transparent 58%),
+                linear-gradient(180deg, #f8fbff 0%, #edf2f8 100%);
+            color: #0f172a;
+        }
+
+        html.bob-light .auth-hero {
+            background: linear-gradient(180deg, #f4f8ff 0%, #e7eef7 100%);
+        }
+
+        html.bob-light .auth-hero::before {
+            background:
+                radial-gradient(900px 600px at 20% 30%, rgba(37, 99, 235, 0.14), transparent 60%),
+                radial-gradient(700px 500px at 80% 70%, rgba(8, 145, 178, 0.12), transparent 55%),
+                radial-gradient(500px 400px at 50% 90%, rgba(245, 158, 11, 0.08), transparent 50%);
+        }
+
+        html.bob-light .auth-hero::after {
+            background:
+                repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 1px,
+                    rgba(15, 23, 42, 0.022) 1px,
+                    rgba(15, 23, 42, 0.022) 2px);
+        }
+
+        html.bob-light .auth-hero-logo,
+        html.bob-light .auth-mobile-logo,
+        html.bob-light .auth-submit {
+            background: linear-gradient(135deg, #2456d8 0%, #0891b2 100%);
+        }
+
+        html.bob-light .auth-hero-logo,
+        html.bob-light .auth-mobile-logo {
+            box-shadow: 0 18px 32px -18px rgba(37, 99, 235, 0.55);
+        }
+
+        html.bob-light .auth-hero-app-name,
+        html.bob-light .auth-mobile-name,
+        html.bob-light .auth-title,
+        html.bob-light .auth-feature-text h4 {
+            color: #0f172a;
+        }
+
+        html.bob-light .auth-hero-app-sub,
+        html.bob-light .auth-link {
+            color: #1d4ed8;
+        }
+
+        html.bob-light .auth-hero-headline {
+            color: #0f172a;
+        }
+
+        html.bob-light .auth-hero-headline span {
+            background: linear-gradient(135deg, #2456d8, #0891b2, #0f766e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        html.bob-light .auth-hero-desc,
+        html.bob-light .auth-feature-text p,
+        html.bob-light .auth-subtitle,
+        html.bob-light .auth-footnote,
+        html.bob-light .auth-footer,
+        html.bob-light .auth-label,
+        html.bob-light .auth-check,
+        html.bob-light .auth-hint {
+            color: #5c6d82;
+        }
+
+        html.bob-light .auth-feature {
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 24px 44px -36px rgba(15, 23, 42, 0.48);
+            backdrop-filter: blur(18px);
+        }
+
+        html.bob-light .auth-feature:hover {
+            background: rgba(255, 255, 255, 0.94);
+            border-color: rgba(37, 99, 235, 0.24);
+            transform: translateX(4px);
+        }
+
+        html.bob-light .auth-feature-icon.indigo {
+            background: rgba(37, 99, 235, 0.12);
+            color: #2456d8;
+        }
+
+        html.bob-light .auth-feature-icon.emerald {
+            background: rgba(16, 185, 129, 0.12);
+            color: #047857;
+        }
+
+        html.bob-light .auth-feature-icon.amber {
+            background: rgba(245, 158, 11, 0.14);
+            color: #b45309;
+        }
+
+        html.bob-light .auth-panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(247, 249, 252, 0.96));
+        }
+
+        html.bob-light .auth-panel::before {
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.26), transparent);
+        }
+
+        html.bob-light .auth-panel::after {
+            background: radial-gradient(600px 400px at 50% 30%, rgba(37, 99, 235, 0.07), transparent 60%);
+        }
+
+        html.bob-light .auth-status {
+            color: #047857;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.18);
+        }
+
+        html.bob-light .auth-pill {
+            color: #1d4ed8;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.18);
+        }
+
+        html.bob-light .auth-input {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f172a;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 14px 28px -24px rgba(15, 23, 42, 0.45);
+        }
+
+        html.bob-light .auth-input::placeholder,
+        html.bob-light .auth-input-icon {
+            color: #94a3b8;
+        }
+
+        html.bob-light .auth-input:focus {
+            border-color: rgba(37, 99, 235, 0.34);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12), 0 20px 34px -26px rgba(37, 99, 235, 0.4);
+        }
+
+        html.bob-light .auth-input:focus + .auth-input-icon,
+        html.bob-light .auth-input:focus ~ .auth-input-icon,
+        html.bob-light .auth-input-wrap:focus-within .auth-input-icon {
+            color: #2456d8;
+        }
+
+        html.bob-light .auth-check input[type="checkbox"] {
+            border: 1.5px solid rgba(148, 163, 184, 0.34);
+            background: #ffffff;
+            accent-color: #2456d8;
+        }
+
+        html.bob-light .auth-link:hover {
+            color: #0f4fc7;
+        }
+
+        html.bob-light .auth-submit {
+            box-shadow:
+                0 20px 40px -24px rgba(37, 99, 235, 0.5),
+                0 4px 10px rgba(15, 23, 42, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        }
+
+        html.bob-light .auth-submit:hover {
+            box-shadow:
+                0 24px 44px -22px rgba(37, 99, 235, 0.58),
+                0 8px 14px rgba(15, 23, 42, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        }
+
+        html.bob-light .auth-footer a {
+            color: #334155;
         }
 
         /* ═══════════════════════════════════════════════════════ */
