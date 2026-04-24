@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ImportBatch extends Model
 {
@@ -64,6 +65,32 @@ class ImportBatch extends Model
     public function isRetryAttempt(): bool
     {
         return !blank($this->retry_of_batch_id) || ($this->attempt_no ?? 1) > 1;
+    }
+
+    /**
+     * Cascade cleanup of child records when a batch is deleted.
+     *
+     * - ReconciliationQueue rows are soft-deleted (preserves historical data integrity
+     *   while removing them from active queues).
+     * - ImportRowError rows are hard-deleted (no historical value; safe to purge).
+     *
+     * This prevents silent data orphaning when batches are removed via the UI.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (ImportBatch $batch) {
+            try {
+                // Soft-delete reconciliation records (preserves audit trail)
+                ReconciliationQueue::where('import_batch_id', $batch->id)->delete();
+
+                // Hard-delete row-level errors (no retention value)
+                ImportRowError::where('import_batch_id', $batch->id)->forceDelete();
+            } catch (\Throwable $e) {
+                Log::error("[ImportBatch] Failed to clean up child records for batch {$batch->id}: " . $e->getMessage());
+                // Re-throw so the deletion is rolled back rather than leaving partial orphans
+                throw $e;
+            }
+        });
     }
 
     public function hasOutput(): bool

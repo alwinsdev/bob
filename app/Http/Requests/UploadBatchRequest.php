@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\ValidUploadSignature;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UploadBatchRequest extends FormRequest
@@ -15,13 +16,13 @@ class UploadBatchRequest extends FormRequest
     {
         return [
             // Carrier feed is always required
-            'carrier_file'        => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'duplicate_strategy'  => ['required', 'in:skip,update'],
+            'carrier_file'       => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Carrier Feed')],
+            'duplicate_strategy' => ['required', 'in:skip,update'],
 
             // At least one of IMS or Health Sherpa must be provided (enforced in withValidator)
-            'ims_file'            => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'payee_file'          => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'health_sherpa_file'  => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
+            'ims_file'           => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('IMS Agent Data')],
+            'payee_file'         => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Agency Payee Details')],
+            'health_sherpa_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Health Sherpa')],
         ];
     }
 

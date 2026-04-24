@@ -28,11 +28,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // ── Reconciliation Module ────────────────────────────────────────────────
     // Base throttle applied at the group level.
-    // Individual routes add their own SINGLE permission: middleware.
-    // No double-gating — each route has exactly one authorization entry point.
+    // Route middleware remains the coarse first gate.
+    // Sensitive controllers re-check authorization for defense in depth.
     Route::prefix('reconciliation')
         ->name('reconciliation.')
-        ->middleware('throttle:150,1')
+        ->middleware('throttle:60,1')
         ->group(function () {
 
             // ── Executive Home ───────────────────────────────────────────────
@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/data', [DashboardController::class, 'data'])
                 ->name('data')
-                ->middleware('permission:reconciliation.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.view']);
 
             Route::get('/export', [DashboardController::class, 'export'])
                 ->name('export')
@@ -60,15 +60,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::post('/upload', [UploadController::class, 'store'])
                 ->name('upload.store')
-                ->middleware(['throttle:30,1', 'permission:reconciliation.etl.run']);
+                ->middleware(['throttle:5,1', 'permission:reconciliation.etl.run']);
 
             Route::post('/batches/{batch}/rerun', [UploadController::class, 'rerun'])
                 ->name('batches.rerun')
-                ->middleware(['throttle:20,1', 'permission:reconciliation.reanalysis.run']);
+                ->middleware(['throttle:5,1', 'permission:reconciliation.reanalysis.run']);
 
             Route::get('/batches/status', [BatchStatusController::class, 'status'])
                 ->name('batches.status')
-                ->middleware('permission:reconciliation.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.view']);
 
             Route::get('/batches/{batch}/download', [UploadController::class, 'download'])
                 ->name('batches.download')
@@ -83,7 +83,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('contract-patch.store')
                 ->middleware(['throttle:10,1', 'permission:reconciliation.etl.run']);
 
-            // PREVIOUSLY UNPROTECTED — now requires export permission
             Route::get('/contract-patch/{batch}/download', [ContractPatchController::class, 'download'])
                 ->name('contract-patch.download')
                 ->middleware('permission:reconciliation.export.download');
@@ -112,11 +111,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // ── Bulk Actions ─────────────────────────────────────────────────
             Route::post('/records/bulk-resolve', [RecordController::class, 'bulkResolve'])
                 ->name('records.bulk-resolve')
-                ->middleware('permission:reconciliation.bulk_approve');
+                ->middleware(['throttle:3,1', 'permission:reconciliation.bulk_approve']);
 
             Route::post('/records/bulk-promote-to-locklist', [RecordController::class, 'bulkPromoteToLocklist'])
                 ->name('records.bulk-promote-to-locklist')
-                ->middleware('permission:reconciliation.bulk_approve');
+                ->middleware(['throttle:3,1', 'permission:reconciliation.bulk_approve']);
 
             Route::post('/records/{record}/promote-to-locklist', [RecordController::class, 'promoteToLocklist'])
                 ->name('records.promote-to-locklist')
@@ -129,7 +128,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/audit-logs/data', [AuditLogController::class, 'data'])
                 ->name('audit-logs.data')
-                ->middleware('permission:reconciliation.bulk_approve');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.bulk_approve']);
 
             // ── Lock List Manager ────────────────────────────────────────────
             Route::get('/locklist', [LockListController::class, 'index'])
@@ -150,7 +149,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::post('/locklist/import', [LockListController::class, 'import'])
                 ->name('locklist.import')
-                ->middleware(['throttle:5,1', 'permission:reconciliation.bulk_approve']);
+                ->middleware(['throttle:2,1', 'permission:reconciliation.bulk_approve']);
 
             Route::put('/locklist/{lockList}', [LockListController::class, 'update'])
                 ->name('locklist.update')
@@ -167,7 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/batches/{batch}/results/data', [BatchResultsController::class, 'batchData'])
                 ->name('batches.results.data')
-                ->middleware('permission:reconciliation.results.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.results.view']);
 
             // ── Commission Layer & Reporting ─────────────────────────────────
             Route::get('/commission-dashboard', [CommissionReportingController::class, 'dashboard'])
@@ -180,7 +179,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/final-bob/data', [CommissionReportingController::class, 'finalBobData'])
                 ->name('reporting.final-bob.data')
-                ->middleware('permission:reconciliation.results.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.results.view']);
 
             Route::get('/final-bob/export', [CommissionReportingController::class, 'exportFinalBob'])
                 ->name('reporting.final-bob.export')
@@ -192,7 +191,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/contract-patch-ledger/data', [ContractPatchReportingController::class, 'data'])
                 ->name('reporting.contract-patches.data')
-                ->middleware('permission:reconciliation.results.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.results.view']);
 
             Route::get('/locklist-impact', [CommissionReportingController::class, 'locklistImpact'])
                 ->name('reporting.locklist-impact')
@@ -200,7 +199,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/locklist-impact/data', [CommissionReportingController::class, 'locklistImpactData'])
                 ->name('reporting.locklist-impact.data')
-                ->middleware('permission:reconciliation.results.view');
+                ->middleware(['throttle:30,1', 'permission:reconciliation.results.view']);
 
             Route::get('/locklist-impact/export', [CommissionReportingController::class, 'exportLocklistImpact'])
                 ->name('reporting.locklist-impact.export')
@@ -241,4 +240,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__ . '/auth.php';
-

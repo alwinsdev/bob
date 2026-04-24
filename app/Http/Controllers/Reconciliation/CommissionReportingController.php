@@ -20,6 +20,8 @@ class CommissionReportingController extends Controller
      */
     public function finalBob()
     {
+        $this->authorizeResultsView();
+
         return view('reconciliation.reporting.final-bob');
     }
 
@@ -29,6 +31,8 @@ class CommissionReportingController extends Controller
      */
     public function finalBobData(Request $request)
     {
+        $this->authorizeResultsView();
+
         $request->validate([
             'batch_id' => ['nullable', 'string', 'max:26'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -124,6 +128,8 @@ class CommissionReportingController extends Controller
      */
     public function dashboard()
     {
+        $this->authorizeResultsView();
+
         $batchId = $this->resolveReportingBatchId(request());
 
         if ($batchId) {
@@ -182,6 +188,8 @@ class CommissionReportingController extends Controller
      */
     public function locklistImpact()
     {
+        $this->authorizeResultsView();
+
         return view('reconciliation.reporting.locklist-impact');
     }
 
@@ -190,6 +198,8 @@ class CommissionReportingController extends Controller
      */
     public function locklistImpactData(Request $request)
     {
+        $this->authorizeResultsView();
+
         $request->validate([
             'batch_id' => ['nullable', 'string', 'max:26'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -333,6 +343,8 @@ class CommissionReportingController extends Controller
      */
     public function exportFinalBob(Request $request)
     {
+        $this->authorizeExportDownload($request);
+
         $user = $request->user();
         $prefs = $user->preferences ?? [];
         $format = $prefs['export_format'] ?? 'xlsx';
@@ -377,6 +389,8 @@ class CommissionReportingController extends Controller
      */
     public function exportLocklistImpact(Request $request)
     {
+        $this->authorizeExportDownload($request);
+
         $user = $request->user();
         $prefs = $user->preferences ?? [];
         $format = $prefs['export_format'] ?? 'xlsx';
@@ -564,6 +578,16 @@ class CommissionReportingController extends Controller
         foreach ($defaultColumns as $column) {
             $query->orderBy($column, $defaultDirection);
         }
+    }
+
+    private function authorizeResultsView(): void
+    {
+        abort_unless(auth()->user()?->can('reconciliation.results.view'), 403);
+    }
+
+    private function authorizeExportDownload(Request $request): void
+    {
+        abort_unless($request->user()?->can('reconciliation.export.download'), 403);
     }
 
 }

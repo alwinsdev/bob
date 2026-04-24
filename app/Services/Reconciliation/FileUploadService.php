@@ -33,15 +33,19 @@ class FileUploadService
 
     public function sanitizeFilename(string $filename): string
     {
-        $sanitized = strip_tags($filename);
+        // 1. Strip path separators and null bytes first to prevent directory traversal
+        $sanitized = str_replace(['/', '\\', '..', "\0"], '', $filename);
+
+        // 2. Remove control characters (non-printable ASCII)
         $sanitized = preg_replace('/[\x00-\x1F\x7F]/u', '', $sanitized) ?? '';
-        $sanitized = trim($sanitized);
 
-        if ($sanitized === '') {
-            return 'upload_file';
-        }
+        // 3. Allow only safe characters: alphanumeric, hyphen, underscore, dot
+        $sanitized = preg_replace('/[^A-Za-z0-9\-_\.]/', '_', $sanitized);
 
-        return Str::limit($sanitized, 255, '');
+        // 4. Trim leading/trailing underscores left by the replacement above
+        $sanitized = trim($sanitized, '_');
+
+        return $sanitized !== '' ? Str::limit($sanitized, 255, '') : 'upload_file';
     }
 
     /**

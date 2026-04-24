@@ -27,7 +27,6 @@ class ContractPatchPolicy
 
     /**
      * Download the output file of a contract patch run.
-     * Previously unprotected — any authenticated user could download.
      */
     public function download(User $user, ImportBatch $batch): bool
     {

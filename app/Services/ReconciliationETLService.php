@@ -34,8 +34,6 @@ use Spatie\SimpleExcel\SimpleExcelReader;
  */
 class ReconciliationETLService
 {
-    private const CONTRACT_PATCH_FLAG_VALUES = ['Home Open', 'Home Close'];
-
     private ReconciliationLookupState $lookupState;
 
     public function __construct(
@@ -83,7 +81,7 @@ class ReconciliationETLService
             $hasIms = (bool) $batch->ims_file_path;
             $hasHs = (bool) $batch->health_sherpa_file_path;
 
-            if (! $hasIms && ! $hasHs) {
+            if (!$hasIms && !$hasHs) {
                 throw new \Exception('Configuration Error: At least one source file (IMS or Health Sherpa) must be provided.');
             }
 
@@ -102,7 +100,7 @@ class ReconciliationETLService
             }
 
             // ── Step E: Validate Carrier file ─────────────────────────────────
-            if (! $batch->carrier_file_path) {
+            if (!$batch->carrier_file_path) {
                 throw new \Exception('System Error: The core Carrier (BOB) file is missing from this run.');
             }
 
@@ -112,12 +110,9 @@ class ReconciliationETLService
             // ── Step F: Stream, match, and write output ────────────────────────
             $this->streamAndMatchCarrier($carrierPath, $batch);
 
-        } catch (\Exception $e) {
-            $batch->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-            Log::error("[BATCH #{$batch->id}] Reconciliation Engine Failure: ".$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error("[BATCH #{$batch->id}] Reconciliation Engine Failure: " . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -127,7 +122,7 @@ class ReconciliationETLService
      */
     private function resetBatchRuntimeArtifacts(ImportBatch $batch): void
     {
-        if (! blank($batch->output_file_path) && Storage::disk('local')->exists($batch->output_file_path)) {
+        if (!blank($batch->output_file_path) && Storage::disk('local')->exists($batch->output_file_path)) {
             Storage::disk('local')->delete($batch->output_file_path);
         }
 
@@ -170,24 +165,21 @@ class ReconciliationETLService
         ]);
 
         try {
-            if (! $batch->contract_file_path) {
+            if (!$batch->contract_file_path) {
                 throw new \Exception('System Error: Contract file is missing for this contract patch run.');
             }
 
             $contractPath = Storage::disk('local')->path($batch->contract_file_path);
-            if (! file_exists($contractPath)) {
+            if (!file_exists($contractPath)) {
                 throw new \Exception('System Error: Contract file was not found on disk.');
             }
 
             $columnMap = $this->detectContractPatchHeaders($contractPath);
             $this->streamContractPatch($contractPath, $batch, $columnMap);
 
-        } catch (\Exception $e) {
-            $batch->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-            Log::error("[ContractPatch][Batch {$batch->id}] Processing failed: ".$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error("[ContractPatch][Batch {$batch->id}] Processing failed: " . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -261,7 +253,7 @@ class ReconciliationETLService
                 ->each(function (ReconciliationQueue $r) use (&$historyMap) {
                     $key = strtolower(trim((string) $r->contract_id));
                     // Keep the most critical (flagged) entry per contract ID
-                    if (! isset($historyMap[$key]) || $r->status === 'flagged') {
+                    if (!isset($historyMap[$key]) || $r->status === 'flagged') {
                         $historyMap[$key] = $r;
                     }
                 });
@@ -363,7 +355,7 @@ class ReconciliationETLService
                         // TIER 2: No historical record in previous Final BOB
                         // ═════════════════════════════════════════════════════
                         $historyRecord = $historyMap[$lookupKey] ?? null;
-                        if ($previousBatchId !== '' && $historyRecord === null && ! $allowForcePatch) {
+                        if ($previousBatchId !== '' && $historyRecord === null && !$allowForcePatch) {
                             $skippedRecords++;
                             $skipReasons['No Historical Record'] = ($skipReasons['No Historical Record'] ?? 0) + 1;
                             $this->writeContractPatchRow($writer, [
@@ -379,9 +371,9 @@ class ReconciliationETLService
                         // TIER 3: No flag history (unless force-patch enabled)
                         // ═════════════════════════════════════════════════════
                         $historicallyFlagged = $historyRecord && $historyRecord->status === 'flagged'
-                            && in_array($historyRecord->flag_value, self::CONTRACT_PATCH_FLAG_VALUES, true);
+                            && in_array($historyRecord->flag_value, config('reconciliation.contract_patch_flag_values', ['House Open', 'House Close']), true);
 
-                        if (! $historicallyFlagged && ! $allowForcePatch) {
+                        if (!$historicallyFlagged && !$allowForcePatch) {
                             $skippedRecords++;
                             $skipReasons['Policy Skip (No Flag History)'] = ($skipReasons['Policy Skip (No Flag History)'] ?? 0) + 1;
                             $this->writeContractPatchRow($writer, [
@@ -398,7 +390,7 @@ class ReconciliationETLService
                         // TIER 5: Locked by Lock List (checked before TIER 4
                         //         so LockList always wins)
                         // ═════════════════════════════════════════════════════
-                        if (! empty($lockListMap[$lookupKey])) {
+                        if (!empty($lockListMap[$lookupKey])) {
                             $skippedRecords++;
                             $skipReasons['Locked by LockList'] = ($skipReasons['Locked by LockList'] ?? 0) + 1;
                             $this->writeContractPatchRow($writer, [
@@ -534,7 +526,7 @@ class ReconciliationETLService
                     } catch (\Throwable $e) {
                         $failedRows++;
                         $failureReasons['System Exception'] = ($failureReasons['System Exception'] ?? 0) + 1;
-                        Log::warning("[ContractPatch][Batch {$batch->id}] Row {$rowNumber} error: ".$e->getMessage());
+                        Log::warning("[ContractPatch][Batch {$batch->id}] Row {$rowNumber} error: " . $e->getMessage());
                         $this->writeContractPatchRow($writer, [
                             'contract_id' => $contractIdRaw ?? '',
                             'status' => 'FAILED',
@@ -558,7 +550,7 @@ class ReconciliationETLService
                             'skipped_records' => $skippedRecords,
                             'contract_patched_records' => $patchedRecords,
                             'status_label' => "Processing: {$processedRows}"
-                                .($totalRows > 0 ? "/{$totalRows}" : ''),
+                                . ($totalRows > 0 ? "/{$totalRows}" : ''),
                             'progress_pct' => $progress,
                         ]);
                         $lastRealtimeFlushedAt = microtime(true);
@@ -567,7 +559,7 @@ class ReconciliationETLService
             );
 
             // Final buffer flush
-            if (! empty($queueUpdateBuffer)) {
+            if (!empty($queueUpdateBuffer)) {
                 $this->flushPatchBuffers($queueUpdateBuffer, $auditLogsBuffer);
             }
 
@@ -575,7 +567,7 @@ class ReconciliationETLService
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error("[ContractPatch][Batch {$batch->id}] Stream failure: ".$e->getMessage());
+            Log::error("[ContractPatch][Batch {$batch->id}] Stream failure: " . $e->getMessage());
             throw $e;
         } finally {
             $writer->close();
@@ -619,7 +611,7 @@ class ReconciliationETLService
      */
     private function flushPatchBuffers(array &$queueBuffer, array &$auditBuffer): void
     {
-        if (! empty($queueBuffer)) {
+        if (!empty($queueBuffer)) {
             DB::table('reconciliation_queue')->upsert(
                 $queueBuffer,
                 ['id'], // unique columns
@@ -640,7 +632,7 @@ class ReconciliationETLService
             );
         }
 
-        if (! empty($auditBuffer)) {
+        if (!empty($auditBuffer)) {
             DB::table('contract_patch_logs')->insert($auditBuffer);
         }
 
@@ -657,7 +649,7 @@ class ReconciliationETLService
     private function resolvePreviousBatchId(ImportBatch $batch, string $parentBatchId): string
     {
         // If already set on the model, trust it
-        if (! empty($batch->previous_batch_id)) {
+        if (!empty($batch->previous_batch_id)) {
             return (string) $batch->previous_batch_id;
         }
 
@@ -691,13 +683,13 @@ class ReconciliationETLService
             $parts[] = 'Contract patch did not update any rows.';
         }
 
-        if (! empty($skipReasons)) {
+        if (!empty($skipReasons)) {
             arsort($skipReasons);
             $reasonParts = [];
             foreach (array_slice($skipReasons, 0, 5, true) as $reason => $count) {
                 $reasonParts[] = "{$count}× {$reason}";
             }
-            $parts[] = 'Skip reasons: '.implode(', ', $reasonParts).'.';
+            $parts[] = 'Skip reasons: ' . implode(', ', $reasonParts) . '.';
         }
 
         if ($failed > 0) {
@@ -715,7 +707,7 @@ class ReconciliationETLService
         $rows = SimpleExcelReader::create($filePath)->headerOnRow(0)->getRows();
         $firstRow = $rows->first();
 
-        if (! $firstRow) {
+        if (!$firstRow) {
             throw new \Exception('Invalid Format: Contract file is empty.');
         }
 
@@ -773,18 +765,18 @@ class ReconciliationETLService
             ]),
         ];
 
-        if (! $mapping['contract_id']) {
+        if (!$mapping['contract_id']) {
             throw new \Exception(
                 'Invalid Format: Contract file must include a Contract ID column (e.g. Contract ID or Policy ID).'
             );
         }
 
-        $hasPatchColumns = ! empty($mapping['agent_name'])
-            || ! empty($mapping['agent_code'])
-            || ! empty($mapping['department'])
-            || ! empty($mapping['payee_name']);
+        $hasPatchColumns = !empty($mapping['agent_name'])
+            || !empty($mapping['agent_code'])
+            || !empty($mapping['department'])
+            || !empty($mapping['payee_name']);
 
-        if (! $hasPatchColumns) {
+        if (!$hasPatchColumns) {
             throw new \Exception(
                 'Invalid Format: Contract file must include at least one patch column (Agent Name, Agent Code, Department, or Payee Name).'
             );
@@ -799,8 +791,8 @@ class ReconciliationETLService
     {
         Storage::disk('local')->makeDirectory('reconciled_outputs');
 
-        $filename = 'Contract_Patch_'.$batch->id.'.xlsx';
-        $outputPath = 'reconciled_outputs/'.$filename;
+        $filename = 'Contract_Patch_' . $batch->id . '.xlsx';
+        $outputPath = 'reconciled_outputs/' . $filename;
         $fullPath = Storage::disk('local')->path($outputPath);
 
         $writer = new XlsxWriter;
@@ -941,12 +933,12 @@ class ReconciliationETLService
                 }
             });
 
-            if (! empty($chunk)) {
+            if (!empty($chunk)) {
                 ReconciliationQueue::insert($chunk);
             }
 
         } catch (\Exception $e) {
-            Log::error("[ETL Stream Error] Batch {$batch->id}: ".$e->getMessage());
+            Log::error("[ETL Stream Error] Batch {$batch->id}: " . $e->getMessage());
             throw $e;
         } finally {
             $writer->close();
@@ -981,8 +973,8 @@ class ReconciliationETLService
     private function initExcelWriter(ImportBatch $batch): array
     {
         Storage::disk('local')->makeDirectory('reconciled_outputs');
-        $filename = 'Final_BOB_'.$batch->id.'.xlsx';
-        $outputPath = 'reconciled_outputs/'.$filename;
+        $filename = 'Final_BOB_' . $batch->id . '.xlsx';
+        $outputPath = 'reconciled_outputs/' . $filename;
         $fullPath = Storage::disk('local')->path($outputPath);
 
         $writer = new XlsxWriter;
@@ -1045,23 +1037,23 @@ class ReconciliationETLService
         $rows = SimpleExcelReader::create($filePath)->headerOnRow(0)->getRows();
         $firstRow = $rows->first();
 
-        if (! $firstRow) {
+        if (!$firstRow) {
             throw new \Exception("File Error: The {$fileLabel} file is empty. Please check the file content and try again.");
         }
 
-        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), array_keys($firstRow));
+        $headers = array_map(fn($h) => strtolower(trim((string) $h)), array_keys($firstRow));
         $missing = [];
 
         foreach ($requiredHeaders as $req) {
-            if (! in_array(strtolower(trim($req)), $headers)) {
+            if (!in_array(strtolower(trim($req)), $headers)) {
                 $missing[] = $req;
             }
         }
 
-        if (! empty($missing)) {
+        if (!empty($missing)) {
             $msg = "Invalid Format: The {$fileLabel} file is missing the following required columns: "
-                .implode(', ', $missing)
-                .'. Please ensure your Excel file includes these exact headers.';
+                . implode(', ', $missing)
+                . '. Please ensure your Excel file includes these exact headers.';
             throw new \Exception($msg);
         }
     }

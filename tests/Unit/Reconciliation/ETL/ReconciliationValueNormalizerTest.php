@@ -11,8 +11,8 @@ class ReconciliationValueNormalizerTest extends TestCase
     {
         $normalizer = app(ReconciliationValueNormalizer::class);
 
-        $this->assertSame('Home Open', $normalizer->flagValue('HOME_OPEN'));
-        $this->assertSame('Home Close', $normalizer->flagValue('home-close'));
+        $this->assertSame('House Open', $normalizer->flagValue('HOUSE_OPEN'));
+        $this->assertSame('House Close', $normalizer->flagValue('house-close'));
         $this->assertNull($normalizer->flagValue('unknown'));
     }
 

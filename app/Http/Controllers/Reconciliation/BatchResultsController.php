@@ -10,6 +10,8 @@ class BatchResultsController extends Controller
 {
     public function show(ImportBatch $batch)
     {
+        abort_unless(auth()->user()?->can('viewResults', $batch), 403);
+
         $batch->load('uploadedBy');
 
         $totalRecords = $batch->total_records ?? 0;
@@ -32,14 +34,16 @@ class BatchResultsController extends Controller
 
     public function batchData(Request $request, ImportBatch $batch)
     {
+        abort_unless($request->user()?->can('viewResults', $batch), 403);
+
         $query = \App\Models\ReconciliationQueue::where('import_batch_id', $batch->id);
 
         if ($source = $request->input('source')) {
             match ($source) {
-                'ims' => $query->where('match_method', 'like', 'ims:%'),
-                'hs' => $query->where('match_method', 'like', 'hs:%'),
-                'locklist' => $query->where('match_method', 'like', '%locklist%'),
-                'unmatched' => $query->whereNull('match_method'),
+                'ims' => $query->where(fn($q) => $q->where('match_method', 'like', '%ims:%')->orWhere('original_match_method', 'like', '%ims:%')),
+                'hs' => $query->where(fn($q) => $q->where('match_method', 'like', '%hs:%')->orWhere('original_match_method', 'like', '%hs:%')),
+                'locklist' => $query->where(fn($q) => $q->where('match_method', 'like', '%locklist%')->orWhere('override_source', 'lock_list')),
+                'unmatched' => $query->whereNull('match_method')->whereNull('original_match_method'),
                 default => null,
             };
         }

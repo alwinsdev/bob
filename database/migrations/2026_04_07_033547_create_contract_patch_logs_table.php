@@ -53,7 +53,7 @@ return new class extends Migration {
 
             // ── Flag Context ──────────────────────────────────────────────
             $table->string('flag_value', 50)->nullable()
-                ->comment('The historical flag (Home Open / Home Close) that justified this patch');
+                ->comment('The historical flag (House Open / House Close) that justified this patch');
 
             // ── Classification ────────────────────────────────────────────
             $table->string('change_type', 50)->default('patch_applied')

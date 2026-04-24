@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\ImportBatch;
+use App\Rules\ValidUploadSignature;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RerunBatchRequest extends FormRequest
@@ -27,11 +28,11 @@ class RerunBatchRequest extends FormRequest
         return [
             'duplicate_strategy' => ['nullable', 'in:skip,update'],
             'rerun_reason' => ['nullable', 'string', 'max:500'],
-            'carrier_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'ims_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'payee_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'health_sherpa_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200'],
-            'contract_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:30720'],
+            'carrier_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Carrier Feed')],
+            'ims_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('IMS Agent Data')],
+            'payee_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Agency Payee Details')],
+            'health_sherpa_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:51200', new ValidUploadSignature('Health Sherpa')],
+            'contract_file' => ['nullable', 'file', 'mimes:csv,txt,xlsx,xls', 'max:30720', new ValidUploadSignature('Contract patch')],
         ];
     }
 

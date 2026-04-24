@@ -438,7 +438,7 @@
                                         <h4 class="text-xs font-bold uppercase tracking-[0.12em] text-teal-300">Contract
                                             Patch Engine</h4>
                                         <p class="text-[11px] text-slate-400 mt-1">Upload a contract file to patch only
-                                            flagged Home Open / Home Close queue records by Contract ID.</p>
+                                            flagged House Open / House Close queue records by Contract ID.</p>
                                     </div>
                                     <span class="text-[10px] font-bold tracking-widest px-2 py-1 rounded"
                                         style="background:rgba(20,184,166,0.14);color:#5eead4;">Mid-Week Patch</span>
@@ -600,9 +600,9 @@
                                     style="background:rgba(15,23,42,0.36);border-color:rgba(45,212,191,0.2);">
                                     <div class="text-[10px] font-bold uppercase tracking-widest text-teal-300">Patch
                                         Scope</div>
-                                    <p class="text-[11px] text-slate-400 mt-1">Only records currently flagged as Home
+                                    <p class="text-[11px] text-slate-400 mt-1">Only records currently flagged as House
                                         Open
-                                        or Home Close will be updated. The patch workbook is always attached to the
+                                        or House Close will be updated. The patch workbook is always attached to the
                                         latest
                                         processed Final BOB run.</p>
                                 </div>
@@ -643,8 +643,7 @@
                                         </div>
                                     </div>
                                     <div class="shrink-0 text-[10px] font-medium"
-                                        :class="isContractReady ? 'text-teal-400' : 'text-amber-400'"
-                                        x-text="isContractReady
+                                        :class="isContractReady ? 'text-teal-400' : 'text-amber-400'" x-text="isContractReady
                                             ? (reanalysisMode ? '✓ Ready to re-analyze' : '✓ Ready to patch')
                                             : (reanalysisMode
                                                 ? 'Upload replacement contract file or keep existing source'
@@ -685,7 +684,7 @@
                             <p class="text-[11px] text-slate-600" x-text="uploadMode === 'contract'
                             ? (reanalysisMode
                                 ? 'This contract patch run will be reprocessed in place. Existing contract file is reused unless you upload a replacement.'
-                                : 'Contract patch runs resolve flagged Home Open/Home Close records and generate a separate patch workbook.')
+                                : 'Contract patch runs resolve flagged House Open/House Close records and generate a separate patch workbook.')
                             : (reanalysisMode
                                 ? 'This run will be reprocessed in place. Existing files are reused unless you upload replacements.'
                                 : 'The engine will try IMS first, then Health Sherpa for any unmatched rows.')"></p>
@@ -1007,8 +1006,8 @@
                     'download_url' => $batch->hasOutput()
                         ? ($canDownload
                             ? ($isContractPatch
-                            ? route('reconciliation.contract-patch.download', $batch)
-                            : route('reconciliation.batches.download', $batch))
+                                ? route('reconciliation.contract-patch.download', $batch)
+                                : route('reconciliation.batches.download', $batch))
                             : null)
                         : null,
                     'results_url' => !$isContractPatch && in_array($batch->status, ['completed', 'completed_with_errors'])
@@ -1042,7 +1041,8 @@
                 ];
             })->values();
         @endphp
-        <div id="etlFlowSection" class="bob-glass-panel" x-data="batchPoller(@js($initialBatches), @js(['can_rerun' => $canRerun, 'can_download' => $canDownload, 'can_delete' => $canDelete]))">
+        <div id="etlFlowSection" class="bob-glass-panel"
+            x-data="batchPoller(@js($initialBatches), @js(['can_rerun' => $canRerun, 'can_download' => $canDownload, 'can_delete' => $canDelete]))">
             <div class="px-6 py-5 flex items-center justify-between border-b border-white/5">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -1610,7 +1610,8 @@
                                                                 d="M3.75 3v4.5h16.5V3m-16.5 0h16.5M3.75 7.5v13.5h16.5V7.5M8.25 12h7.5M8.25 15.75h7.5" />
                                                         </svg>
                                                     </a>
-                                                    <template x-if="canDownload && patch.has_output && hasPatchData(patch)">
+                                                    <template
+                                                        x-if="canDownload && patch.has_output && hasPatchData(patch)">
                                                         <a :href="patch.download_url" @click.stop
                                                             class="w-8 h-8 rounded-lg flex items-center justify-center text-teal-400 hover:bg-teal-500/10 border border-teal-500/20 transition-all shadow-sm"
                                                             title="Download Result">
@@ -1621,7 +1622,8 @@
                                                             </svg>
                                                         </a>
                                                     </template>
-                                                    <template x-if="canDownload && patch.has_output && !hasPatchData(patch)">
+                                                    <template
+                                                        x-if="canDownload && patch.has_output && !hasPatchData(patch)">
                                                         <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 border border-white/5 opacity-40 cursor-not-allowed"
                                                             title="No records were patched or failed.">
                                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
@@ -1742,7 +1744,7 @@
                                                 Required Action</div>
                                             <ul class="text-[11px] text-slate-400 space-y-1 ml-1 list-disc list-inside">
                                                 <li>Open Reconciliation Grid and filter to matching Contract IDs.</li>
-                                                <li>Flag records and set to Home Open / Home Close.</li>
+                                                <li>Flag records and set to House Open / House Close.</li>
                                                 <li>Restart the synchronization.</li>
                                             </ul>
                                         </div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LockList;
 use App\Models\ReconciliationAuditLog;
 use App\Exports\LockListExport;
+use App\Rules\ValidUploadSignature;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -22,9 +23,8 @@ use Spatie\SimpleExcel\SimpleExcelReader;
  * Manages the Lock List — the "Final Authority" table that forces
  * agent/department/payee values onto BOB records regardless of IMS or HS matches.
  *
- * Authorization is handled exclusively at the route layer via Spatie permission middleware.
- * Do NOT add inline permission checks to this controller — that would violate the
- * single-authorization-source-of-truth principle.
+ * Route middleware remains the first authorization gate.
+ * This controller performs a second permission/policy check for defense in depth.
  *
  * Route Permission Map:
  *  - index / data                         → reconciliation.view
@@ -38,6 +38,8 @@ class LockListController extends Controller
 
     public function index()
     {
+        abort_unless(auth()->user()?->can('viewAny', LockList::class), 403);
+
         $totalEntries = LockList::count();
 
         return view('reconciliation.locklist', compact('totalEntries'));
@@ -47,6 +49,8 @@ class LockListController extends Controller
 
     public function data(Request $request)
     {
+        abort_unless($request->user()?->can('viewAny', LockList::class), 403);
+
         $query = LockList::query()
             ->select(['id', 'policy_id', 'agent_name', 'department', 'payee_name', 'created_at', 'updated_at',
                        'promoted_from_batch_id', 'promoted_by']);
@@ -94,8 +98,18 @@ class LockListController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()?->can('create', LockList::class), 403);
+
         $data = $request->validate([
-            'policy_id'  => ['required', 'string', 'max:255', Rule::unique('lock_lists', 'policy_id')],
+            'policy_id'  => [
+                'required',
+                'string',
+                'max:255',
+                // Alphanumeric + hyphens only; minimum 3 characters.
+                // Adjust pattern if BOB policy IDs have a stricter known format.
+                'regex:/^[A-Z0-9\-]{3,}$/i',
+                Rule::unique('lock_lists', 'policy_id'),
+            ],
             'agent_name' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'payee_name' => ['nullable', 'string', 'max:255'],
@@ -116,6 +130,8 @@ class LockListController extends Controller
 
     public function update(Request $request, LockList $lockList)
     {
+        abort_unless($request->user()?->can('update', $lockList), 403);
+
         $data = $request->validate([
             'agent_name' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
@@ -136,6 +152,8 @@ class LockListController extends Controller
 
     public function destroy(LockList $lockList)
     {
+        abort_unless(auth()->user()?->can('delete', $lockList), 403);
+
         $policyId = $lockList->policy_id;
         $lockList->delete();
 
@@ -155,8 +173,10 @@ class LockListController extends Controller
      */
     public function import(Request $request)
     {
+        abort_unless($request->user()?->can('import', LockList::class), 403);
+
         $request->validate([
-            'import_file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'import_file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240', new ValidUploadSignature('Lock list import')],
         ]);
 
         $file = $request->file('import_file');
@@ -176,6 +196,12 @@ class LockListController extends Controller
 
                 if (empty($policyId)) {
                     $errors[] = 'Skipped row: CONTRACT_ID is empty.';
+                    return;
+                }
+
+                // Reject malformed policy IDs (must be alphanumeric + hyphens, min 3 chars)
+                if (!preg_match('/^[A-Z0-9\-]{3,}$/i', $policyId)) {
+                    $errors[] = "Skipped row: CONTRACT_ID '{$policyId}' has an invalid format.";
                     return;
                 }
 
@@ -200,7 +226,7 @@ class LockListController extends Controller
             });
         } catch (\Exception $e) {
             Log::error('[LockList Import] Failed: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Import failed: ' . $e->getMessage()], 422);
+            return response()->json(['success' => false, 'message' => 'Import failed due to a server error. Please check the file format and try again.'], 422);
         } finally {
             Storage::disk('local')->delete($path);
         }
@@ -223,6 +249,8 @@ class LockListController extends Controller
      */
     public function export(Request $request)
     {
+        abort_unless($request->user()?->can('export', LockList::class), 403);
+
         $user = $request->user();
         $prefs = $user->preferences ?? [];
         $format = $prefs['export_format'] ?? 'xlsx';
@@ -264,7 +292,8 @@ class LockListController extends Controller
                 'transaction_id'      => 'LOCKLIST',
                 'action'              => $action,
                 'modified_by_user_id' => auth()->id(),
-                'ip_address'          => request()->ip(),
+                // Store a SHA-256 hash of the IP — plaintext IPs are PII
+                'ip_address'          => hash('sha256', (string) request()->ip()),
                 'user_agent'          => request()->userAgent(),
                 'notes'               => $context,
             ]);

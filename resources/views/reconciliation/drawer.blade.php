@@ -204,8 +204,8 @@
                     <label class="text-[10px] font-bold uppercase tracking-wider text-sky-300 block mb-1">Flag
                         Value</label>
                     <select x-model="flagValue" class="bob-form-input py-1.5 text-xs min-w-[140px]">
-                        <option value="Home Open">Home Open</option>
-                        <option value="Home Close">Home Close</option>
+                        <option value="House Open">House Open</option>
+                        <option value="House Close">House Close</option>
                     </select>
                 </div>
 

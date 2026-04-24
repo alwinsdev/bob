@@ -24,6 +24,8 @@ class UploadController extends Controller
 
     public function index()
     {
+        abort_unless(auth()->user()?->can('create', ImportBatch::class), 403);
+
         // Only top-level batches — nested contract patches are embedded inside their parent row
         $batches = ImportBatch::with(['uploadedBy', 'childPatches.uploadedBy'])
             ->topLevel()
@@ -58,6 +60,8 @@ class UploadController extends Controller
 
     public function store(UploadBatchRequest $request)
     {
+        abort_unless($request->user()?->can('create', ImportBatch::class), 403);
+
         $dto = new UploadBatchDTO(
             carrierFile: $request->file('carrier_file'),
             imsFile: $request->file('ims_file') ?? null,
@@ -86,6 +90,8 @@ class UploadController extends Controller
 
     public function rerun(RerunBatchRequest $request, ImportBatch $batch)
     {
+        abort_unless($request->user()?->can('rerun', $batch), 403);
+
         if (in_array($batch->status, ['pending', 'processing'], true)) {
             return response()->json([
                 'success' => false,
@@ -156,6 +162,8 @@ class UploadController extends Controller
 
     public function download(ImportBatch $batch)
     {
+        abort_unless(auth()->user()?->can('downloadOutput', $batch), 403);
+
         abort_unless($batch->hasOutput(), 404, 'No output file available for this run.');
 
         $fullPath = Storage::disk('local')->path($batch->output_file_path);
@@ -170,6 +178,8 @@ class UploadController extends Controller
 
     public function destroy(ImportBatch $batch)
     {
+        abort_unless(auth()->user()?->can('delete', $batch), 403);
+
         $this->reconciliationService->deleteBatch($batch, auth()->id() ?? config('reconciliation.system_user_id', 1));
 
         return redirect()

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reconciliation;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AuditLogController extends Controller
 {
@@ -13,6 +14,8 @@ class AuditLogController extends Controller
      */
     public function index()
     {
+        abort_unless(auth()->user()?->can('reconciliation.bulk_approve'), 403);
+
         return view('reconciliation.audit-logs', [
             'pageTitle' => 'System Audit Logs',
             'pageSubtitle' => 'Monitor the trail of interventions, resolutions, and system changes',
@@ -24,6 +27,23 @@ class AuditLogController extends Controller
      */
     public function data(Request $request)
     {
+        abort_unless($request->user()?->can('reconciliation.bulk_approve'), 403);
+
+        // Validate pagination and sort inputs to prevent type-confusion issues.
+        $validator = Validator::make($request->all(), [
+            'page'       => ['nullable', 'integer', 'min:1'],
+            'limit'      => ['nullable', 'integer', 'min:1', 'max:250'],
+            'sortModel'  => ['nullable', 'string'],
+            'actionType' => ['nullable', 'string'],
+            'search'     => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Build each sub-query using the Query Builder — native .union() manages
+        // bindings automatically, avoiding the fragile mergeBindings chaining.
         $auditLogs = DB::table('reconciliation_audit_logs')
             ->leftJoin('users', 'reconciliation_audit_logs.modified_by_user_id', '=', 'users.id')
             ->select([
@@ -56,22 +76,25 @@ class AuditLogController extends Controller
                 DB::raw("'contract_patch' as source"),
             ]);
 
-        $query = DB::table(DB::raw("({$auditLogs->toSql()} UNION {$patchLogs->toSql()}) as combined_logs"))
-            ->mergeBindings($auditLogs)
-            ->mergeBindings($patchLogs);
+        // Native union() — bindings handled by the framework (no raw SQL string).
+        // Wrapped in fromSub() so that WHERE filters (including aliased columns like
+        // `user_name`) are applied on the OUTER derived table, not inside a sub-query
+        // where MySQL does not allow WHERE to reference SELECT aliases.
+        $union = $auditLogs->union($patchLogs);
+        $query = DB::query()->fromSub($union, 'combined_logs');
 
         $allowedSortFields = [
-            'created_at' => 'created_at',
-            'action' => 'action',
+            'created_at'     => 'created_at',
+            'action'         => 'action',
             'transaction_id' => 'transaction_id',
             'user' => 'user_name',
         ];
 
-        if ($request->has('actionType') && $request->actionType !== 'all') {
+        if ($request->filled('actionType') && $request->actionType !== 'all') {
             $query->where('action', $request->actionType);
         }
 
-        if ($request->has('search') && ! empty($request->search)) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('transaction_id', 'like', "%{$search}%")

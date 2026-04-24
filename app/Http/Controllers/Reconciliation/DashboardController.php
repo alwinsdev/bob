@@ -13,19 +13,25 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        abort_unless(auth()->user()?->can('reconciliation.view'), 403);
+
         $metrics = [
             'total_pending' => ReconciliationQueue::pending()->count(),
             'total_flagged' => ReconciliationQueue::flagged()->count(),
             'total_resolved' => ReconciliationQueue::resolved()->count(),
+            'total_matched' => ReconciliationQueue::where('status', 'matched')->count(),
             'total_batches' => ImportBatch::count(),
             'total_locklist_overrides' => ReconciliationQueue::where('override_flag', true)->count(),
         ];
+        $metrics['total_aligned'] = $metrics['total_resolved'] + $metrics['total_matched'];
 
         return view('reconciliation.dashboard', compact('metrics'));
     }
 
     public function data(Request $request)
     {
+        abort_unless($request->user()?->can('reconciliation.view'), 403);
+
         $query = $this->buildQuery($request);
 
         $perPage = max(1, min((int) $request->integer('per_page', 50), 250));
@@ -73,6 +79,8 @@ class DashboardController extends Controller
      */
     public function export(Request $request)
     {
+        abort_unless($request->user()?->can('reconciliation.export.download'), 403);
+
         $user = $request->user();
         $prefs = $user->preferences ?? [];
         $format = $prefs['export_format'] ?? 'xlsx';

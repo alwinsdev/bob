@@ -12,11 +12,14 @@ use App\Models\Agent;
 use App\Services\RecordLockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class RecordController extends Controller
 {
     public function lock(ReconciliationQueue $record, RecordLockService $lockService)
     {
+        Gate::authorize('lock', $record);
+
         if ($record->isLockedByOther(auth()->user())) {
             return response()->json(['success' => false, 'message' => 'Record is currently locked by another user.'], 403);
         }
@@ -27,7 +30,7 @@ class RecordController extends Controller
             'transaction_id' => $record->transaction_id,
             'action' => 'lock_acquired',
             'modified_by_user_id' => auth()->id(),
-            'ip_address' => request()->ip(),
+            'ip_address' => hash('sha256', (string) request()->ip()),
             'user_agent' => request()->userAgent(),
         ]);
 
@@ -36,6 +39,8 @@ class RecordController extends Controller
 
     public function unlock(ReconciliationQueue $record, RecordLockService $lockService)
     {
+        Gate::authorize('update', $record);
+
         $user = auth()->user();
         if ($record->locked_by !== $user->id && !$user->can('reconciliation.bulk_approve')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized to unlock this record.'], 403);
@@ -50,7 +55,7 @@ class RecordController extends Controller
                 'transaction_id' => $record->transaction_id,
                 'action' => 'lock_released',
                 'modified_by_user_id' => auth()->id(),
-                'ip_address' => request()->ip(),
+                'ip_address' => hash('sha256', (string) request()->ip()),
                 'user_agent' => request()->userAgent(),
             ]);
         }
@@ -60,17 +65,14 @@ class RecordController extends Controller
 
     public function resolve(ResolveRecordRequest $request, ReconciliationQueue $record, RecordLockService $lockService)
     {
+        Gate::authorize('update', $record);
+
         if ($record->locked_by !== auth()->id()) {
             return response()->json(['success' => false, 'message' => 'You must lock the record before resolving.'], 403);
         }
 
-        $agent = Agent::where('agent_code', $request->aligned_agent_code)->first();
-        if (!$agent) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Aligned Agent Code was not found. Please enter a valid code.',
-            ], 422);
-        }
+        // The ResolveRecordRequest uses 'exists:agents,agent_code', guaranteeing this finds a record.
+        $agent = Agent::where('agent_code', $request->aligned_agent_code)->firstOrFail();
 
         try {
             DB::transaction(function () use ($request, $record, $agent, $lockService) {
@@ -93,7 +95,7 @@ class RecordController extends Controller
                     'previous_agent_code' => $prevAgentCode,
                     'new_agent_code' => $agent->agent_code,
                     'modified_by_user_id' => auth()->id(),
-                    'ip_address' => request()->ip(),
+                    'ip_address' => hash('sha256', (string) request()->ip()),
                     'user_agent' => request()->userAgent(),
                 ]);
 
@@ -117,7 +119,7 @@ class RecordController extends Controller
                             'action' => 'locklist_updated',
                             'new_agent_code' => $agent->agent_code,
                             'modified_by_user_id' => $user->id,
-                            'ip_address' => request()->ip(),
+                            'ip_address' => hash('sha256', (string) request()->ip()),
                             'user_agent' => request()->userAgent(),
                             'notes' => "Manual resolve saved to Lock List for contract {$record->contract_id}.",
                         ]);
@@ -131,9 +133,7 @@ class RecordController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => config('app.debug')
-                    ? ('Resolution failed: ' . $e->getMessage())
-                    : 'Resolution failed due to a server issue. Please try again.',
+                'message' => 'Resolution failed due to a server error. Please contact support.',
             ], 500);
         }
 
@@ -142,6 +142,8 @@ class RecordController extends Controller
 
     public function flag(Request $request, ReconciliationQueue $record, RecordLockService $lockService)
     {
+        Gate::authorize('update', $record);
+
         if ($record->locked_by !== auth()->id()) {
             return response()->json(['success' => false, 'message' => 'You must lock the record before flagging.'], 403);
         }
@@ -154,19 +156,21 @@ class RecordController extends Controller
         // Backward compatibility: older bundles may omit flag_value entirely.
         $rawFlagValue = $request->input('flag_value', $request->input('flagValue'));
         if ($rawFlagValue === null || trim((string) $rawFlagValue) === '') {
-            $rawFlagValue = $record->flag_value ?: 'Home Open';
+            $rawFlagValue = $record->flag_value ?: 'House Open';
         }
 
         $normalizedFlagValue = match (strtolower(trim((string) $rawFlagValue))) {
-            'home open' => 'Home Open',
-            'home close' => 'Home Close',
+            'home open',
+            'house open' => 'House Open',
+            'home close',
+            'house close' => 'House Close',
             default => null,
         };
 
         if ($normalizedFlagValue === null) {
             return response()->json([
                 'success' => false,
-                'message' => 'Flag value must be either Home Open or Home Close.',
+                'message' => 'Flag value must be either House Open or House Close.',
             ], 422);
         }
 
@@ -181,7 +185,7 @@ class RecordController extends Controller
             'transaction_id' => $record->transaction_id,
             'action' => 'flagged',
             'modified_by_user_id' => auth()->id(),
-            'ip_address' => request()->ip(),
+            'ip_address' => hash('sha256', (string) request()->ip()),
             'user_agent' => request()->userAgent(),
         ]);
 
@@ -192,25 +196,48 @@ class RecordController extends Controller
 
     public function bulkResolve(BulkResolveRequest $request)
     {
-        $agent = Agent::where('agent_code', $request->aligned_agent_code)->first();
-        if (!$agent) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Aligned Agent Code was not found. Please enter a valid code.',
-            ], 422);
-        }
+        Gate::authorize('bulkApprove', ReconciliationQueue::class);
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, ReconciliationQueue> $records */
-        $records = ReconciliationQueue::whereIn('id', $request->record_ids)
-            ->whereIn('status', ['pending', 'flagged'])
-            ->get();
+        // BulkResolveRequest already validates 'exists:agents,agent_code'
+        $agent = Agent::where('agent_code', $request->aligned_agent_code)->firstOrFail();
 
         $processed = 0;
         try {
-            DB::transaction(function () use ($records, $agent, $request, &$processed) {
-                foreach ($records as $record) {
+            $result = DB::transaction(function () use ($request, $agent, &$processed) {
+                $requestedIds = collect($request->record_ids)->values();
+
+                /** @var \Illuminate\Support\Collection<string, ReconciliationQueue> $records */
+                $records = ReconciliationQueue::whereIn('id', $requestedIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                $lockedByOthers = $records
+                    ->filter(fn (ReconciliationQueue $record) => $record->locked_by !== null && $record->locked_by !== auth()->id())
+                    ->keys()
+                    ->values();
+
+                if ($lockedByOthers->isNotEmpty()) {
+                    return [
+                        'conflict' => true,
+                        'locked_ids' => $lockedByOthers,
+                    ];
+                }
+
+                foreach ($requestedIds as $recordId) {
+                    /** @var ReconciliationQueue|null $record */
+                    $record = $records->get($recordId);
+
+                    if (! $record) {
+                        continue;
+                    }
+
                     /** @var ReconciliationQueue $record */
                     if ($record->isLockedByOther(auth()->user()) || $record->status === 'resolved') {
+                        continue;
+                    }
+
+                    if (! in_array($record->status, ['pending', 'flagged'], true)) {
                         continue;
                     }
 
@@ -235,22 +262,33 @@ class RecordController extends Controller
                         'previous_agent_code' => $prevAgentCode,
                         'new_agent_code' => $agent->agent_code,
                         'modified_by_user_id' => auth()->id(),
-                        'ip_address' => request()->ip(),
+                        'ip_address' => hash('sha256', (string) request()->ip()),
                         'user_agent' => request()->userAgent(),
                     ]);
 
                     $processed++;
                 }
+
+                return [
+                    'conflict' => false,
+                    'locked_ids' => collect(),
+                ];
             });
         } catch (\Throwable $e) {
             report($e);
 
             return response()->json([
                 'success' => false,
-                'message' => config('app.debug')
-                    ? ('Bulk resolution failed: ' . $e->getMessage())
-                    : 'Bulk resolution failed due to a server issue. Please try again.',
+                'message' => 'Bulk resolution failed due to a server error. Please contact support.',
             ], 500);
+        }
+
+        if (($result['conflict'] ?? false) === true) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Some records are currently locked by other users. Please wait for them to be released and try again.',
+                'locked_ids' => $result['locked_ids']->values(),
+            ], 409);
         }
 
         if ($processed === 0) {
@@ -274,6 +312,8 @@ class RecordController extends Controller
      */
     public function bulkPromoteToLocklist(Request $request)
     {
+        Gate::authorize('bulkApprove', ReconciliationQueue::class);
+
         $user = auth()->user();
 
         $request->validate([
@@ -313,7 +353,7 @@ class RecordController extends Controller
                     'action' => 'promoted_to_locklist',
                     'new_agent_code' => $record->aligned_agent_code,
                     'modified_by_user_id' => $user->id,
-                    'ip_address' => request()->ip(),
+                    'ip_address' => hash('sha256', (string) request()->ip()),
                     'user_agent' => request()->userAgent(),
                     'notes' => "Bulk promoted contract {$record->contract_id} to Lock List.",
                 ]);
@@ -336,6 +376,8 @@ class RecordController extends Controller
      */
     public function promoteToLocklist(ReconciliationQueue $record)
     {
+        Gate::authorize('promote', $record);
+
         $user = auth()->user();
 
         // A contract_id is mandatory for a Lock List entry (policy_id)
@@ -363,7 +405,7 @@ class RecordController extends Controller
                 'action' => 'promoted_to_locklist',
                 'new_agent_code' => $record->aligned_agent_code,
                 'modified_by_user_id' => $user->id,
-                'ip_address' => request()->ip(),
+                'ip_address' => hash('sha256', (string) request()->ip()),
                 'user_agent' => request()->userAgent(),
                 'notes' => "Promoted contract {$record->contract_id} to Lock List.",
             ]);

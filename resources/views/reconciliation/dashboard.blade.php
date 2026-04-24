@@ -63,8 +63,8 @@
                     </div>
                 </div>
 
-                {{-- Resolved --}}
-                <div class="bob-metric-card bob-metric-emerald group" @click="updateFilter('resolved')">
+                {{-- Aligned (Matched + Resolved) --}}
+                <div class="bob-metric-card bob-metric-emerald group" @click="updateFilter('all')">
                     <div class="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10 -translate-y-8 translate-x-8 transition-transform duration-500 group-hover:scale-150" style="background: radial-gradient(circle, #10b981, transparent 70%);"></div>
                     <div class="flex items-center gap-4 mb-3 relative z-10">
                         <div class="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style="background: rgba(16,185,129,0.15);">
@@ -73,14 +73,14 @@
                             </svg>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-emerald-400/80">Resolved</div>
-                            <div class="text-3xl font-extrabold tracking-tight" style="color: var(--bob-text-primary)">{{ number_format($metrics['total_resolved']) }}</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-emerald-400/80">Aligned</div>
+                            <div class="text-3xl font-extrabold tracking-tight" style="color: var(--bob-text-primary)">{{ number_format($metrics['total_aligned']) }}</div>
                         </div>
                     </div>
                     <div class="flex items-center justify-between relative z-10">
-                        <div class="text-xs font-medium" style="color: var(--bob-text-muted)">Successfully aligned</div>
+                        <div class="text-xs font-medium" style="color: var(--bob-text-muted)">Auto matched + Manual resolved</div>
                         <div class="w-16 h-1 rounded-full overflow-hidden bg-white/5">
-                            <div class="h-full rounded-full bg-emerald-400/60" style="width: {{ $metrics['total_resolved'] > 0 ? min(100, ($metrics['total_resolved'] / max(1, $metrics['total_pending'] + $metrics['total_resolved'])) * 100) : 0 }}%"></div>
+                            <div class="h-full rounded-full bg-emerald-400/60" style="width: {{ $metrics['total_aligned'] > 0 ? min(100, ($metrics['total_aligned'] / max(1, $metrics['total_pending'] + $metrics['total_aligned'])) * 100) : 0 }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -110,7 +110,7 @@
 
             {{-- ── Summary Stats Strip ── --}}
             @php
-                $totalAll = $metrics['total_pending'] + $metrics['total_flagged'] + $metrics['total_resolved'];
+                $totalAll = $metrics['total_pending'] + $metrics['total_flagged'] + $metrics['total_resolved'] + $metrics['total_matched'];
             @endphp
             <div class="bob-glass-panel p-4">
                 <div class="flex items-center justify-between gap-6">
@@ -125,14 +125,14 @@
                     <div class="flex-1 max-w-md">
                         <div class="flex h-2 rounded-full overflow-hidden" style="background: var(--bob-border-medium)">
                             @if($totalAll > 0)
-                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_resolved'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
-                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_flagged'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #e11d48, #fb7185);"></div>
-                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_pending'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #d97706, #fbbf24);"></div>
+                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_aligned'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #10b981, #34d399);" title="Aligned"></div>
+                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_flagged'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #e11d48, #fb7185);" title="Flagged"></div>
+                            <div class="h-full transition-all duration-700" style="width: {{ ($metrics['total_pending'] / $totalAll) * 100 }}%; background: linear-gradient(90deg, #d97706, #fbbf24);" title="Pending"></div>
                             @endif
                         </div>
                     </div>
                     <div class="flex items-center gap-4 text-[11px] font-bold">
-                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span style="color: var(--bob-text-muted)">Resolved</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span style="color: var(--bob-text-muted)">Aligned</span></span>
                         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-400"></span> <span style="color: var(--bob-text-muted)">Flagged</span></span>
                         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span> <span style="color: var(--bob-text-muted)">Pending</span></span>
                     </div>

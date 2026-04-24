@@ -13,7 +13,7 @@ document.addEventListener('alpine:init', () => {
             compensation_type: '',
             save_to_locklist: false
         },
-        flagValue: 'Home Open',
+        flagValue: 'House Open',
 
         init() {
             this.initGrid();
@@ -389,7 +389,7 @@ document.addEventListener('alpine:init', () => {
                 this.resolutionData.aligned_agent_code = '';
                 this.resolutionData.compensation_type = '';
                 this.resolutionData.save_to_locklist = false;
-                this.flagValue = obj.flag_value || 'Home Open';
+                this.flagValue = obj.flag_value || 'House Open';
 
                 if (this.activeRecord.agent_id) {
                     this.resolutionData.aligned_agent_code = this.activeRecord.agent_id;
@@ -453,8 +453,8 @@ document.addEventListener('alpine:init', () => {
             const recordId = this.activeRecord?.id;
             if (!recordId) return;
 
-            if (!['Home Open', 'Home Close'].includes(this.flagValue)) {
-                SwalBob.fire('Warning', 'Please choose Home Open or Home Close before flagging.', 'warning');
+            if (!['House Open', 'House Close'].includes(this.flagValue)) {
+                SwalBob.fire('Warning', 'Please choose House Open or House Close before flagging.', 'warning');
                 return;
             }
 

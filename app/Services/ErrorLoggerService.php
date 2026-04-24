@@ -20,7 +20,7 @@ class ErrorLoggerService
                     'trace' => substr($e->getTraceAsString(), 0, 1000)
                 ]),
                 'user_id' => $userId ?? auth()->id(),
-                'ip_address' => request()->ip(),
+                'ip_address' => request()?->ip(),
             ]);
         } catch (\Exception $fallback) {
             Log::error("Failed to write to SystemErrorLog: " . $fallback->getMessage());

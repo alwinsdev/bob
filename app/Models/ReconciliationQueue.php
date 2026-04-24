@@ -12,8 +12,6 @@ class ReconciliationQueue extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
-    private const AUTO_REVIEW_THRESHOLD = 90.0;
-
     protected $table = 'reconciliation_queue';
 
     // Only Column C + lock/status fields are fillable via request.
@@ -103,7 +101,7 @@ class ReconciliationQueue extends Model
             return 'none';
         }
 
-        if ($score >= self::AUTO_REVIEW_THRESHOLD) {
+        if ($score >= config('reconciliation.auto_review_threshold', 90.0)) {
             return 'high';
         }
 
@@ -206,8 +204,8 @@ class ReconciliationQueue extends Model
             if ($score < 70.0) {
                 return 'Flagged: low-confidence match needs manual verification.';
             }
-            if ($score < self::AUTO_REVIEW_THRESHOLD) {
-                return 'Flagged: below 90% confidence threshold.';
+            if ($score < config('reconciliation.auto_review_threshold', 90.0)) {
+                return 'Flagged: below ' . config('reconciliation.auto_review_threshold', 90.0) . '% confidence threshold.';
             }
             return 'Flagged by workflow policy for analyst validation.';
         }
@@ -221,7 +219,7 @@ class ReconciliationQueue extends Model
 
                 return 'Pending: no IMS or Health Sherpa record matched the available identifiers.';
             }
-            if ($score < self::AUTO_REVIEW_THRESHOLD) {
+            if ($score < config('reconciliation.auto_review_threshold', 90.0)) {
                 return 'Pending: confidence below auto-review threshold.';
             }
             return 'Pending analyst confirmation before resolution.';

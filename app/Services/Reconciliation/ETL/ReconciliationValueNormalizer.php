@@ -16,7 +16,7 @@ class ReconciliationValueNormalizer
 
     public function date(mixed $value): string
     {
-        if (! $value) {
+        if (!$value) {
             return '';
         }
 
@@ -78,7 +78,7 @@ class ReconciliationValueNormalizer
 
     public function extractColumnValue(array $row, ?string $column): string
     {
-        if (! $column) {
+        if (!$column) {
             return '';
         }
 
@@ -97,8 +97,10 @@ class ReconciliationValueNormalizer
         $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
 
         return match ($normalized) {
-            'home open' => 'Home Open',
-            'home close' => 'Home Close',
+            'home open',
+            'house open' => 'House Open',
+            'home close',
+            'house close' => 'House Close',
             default => null,
         };
     }

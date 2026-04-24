@@ -16,7 +16,25 @@ class ProcessImportBatchJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /** Retry at most 3 total attempts. */
+    public int $tries = 3;
+
+    /** Maximum wall-clock time for a single attempt. */
     public $timeout = 3600; // 1 hr max
+
+    /**
+     * Retry up to 3 times total before hard-failing.
+     * Transient failures (DB timeout, memory spike) should resolve on retry.
+     */
+    public int $maxExceptions = 3;
+
+    /**
+     * Exponential backoff between attempts: 1 min → 5 min → 15 min.
+     * Gives the system time to recover from transient overload conditions.
+     *
+     * @var array<int>
+     */
+    public array $backoff = [60, 300, 900];
 
     public function __construct(
         public ImportBatch $batch
@@ -34,7 +52,7 @@ class ProcessImportBatchJob implements ShouldQueue
             $etlService->processBatch($this->batch);
         } catch (\Throwable $e) {
             Log::error("Failed to process batch {$this->batch->id}: " . $e->getMessage());
-            $this->fail($e);
+            throw $e;
         }
     }
 
