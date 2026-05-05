@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\SanitizesSpreadsheetCells;
 use App\Models\ReconciliationQueue;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,6 +12,7 @@ use Maatwebsite\Excel\Concerns\Exportable;
 class LocklistImpactExport implements FromQuery, WithHeadings, WithMapping
 {
     use Exportable;
+    use SanitizesSpreadsheetCells;
 
     protected $search;
     protected $batchId;
@@ -60,7 +62,7 @@ class LocklistImpactExport implements FromQuery, WithHeadings, WithMapping
 
     public function map($row): array
     {
-        return [
+        return $this->sanitizeRow([
             $row->contract_id,
             trim($row->member_first_name . ' ' . $row->member_last_name),
             $row->original_match_method ?: 'Unmatched',
@@ -68,6 +70,6 @@ class LocklistImpactExport implements FromQuery, WithHeadings, WithMapping
             $row->aligned_agent_name,
             $row->group_team_sales,
             'RESOLVED',
-        ];
+        ]);
     }
 }

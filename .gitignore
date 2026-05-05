@@ -42,3 +42,5 @@ Thumbs.db
 !/tests/Unit/Reconciliation/ETL/ReconciliationValueNormalizerTest.php
 .codex/
 /BOB System Audit Log.md
+
+/docs

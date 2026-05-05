@@ -439,6 +439,61 @@
         </footer>
     </div>
 
+    {{-- ── Dify AI Chatbot Widget ── --}}
+    <div x-data="{ chatOpen: false }" class="bob-chatbot-wrapper">
+        {{-- Floating Action Button --}}
+        <div class="bob-chatbot-fab-container">
+            {{-- Hover label --}}
+            <div class="bob-chatbot-fab-label" :class="chatOpen ? 'opacity-0 pointer-events-none' : ''">
+                <span>Ask AI</span>
+            </div>
+            <button
+                @click="chatOpen = !chatOpen"
+                :class="chatOpen ? 'bob-chatbot-fab-active' : ''"
+                class="bob-chatbot-fab"
+                title="AI Assistant"
+                aria-label="Toggle AI Assistant">
+                {{-- Animated orbital ring --}}
+                <span class="bob-chatbot-fab-ring"></span>
+                {{-- Inner glass layer --}}
+                <span class="bob-chatbot-fab-glass"></span>
+                {{-- Sparkle AI icon (shown when closed) --}}
+                <svg x-show="!chatOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 rotate-90 scale-50" x-transition:enter-end="opacity-100 rotate-0 scale-100" class="bob-chatbot-fab-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                </svg>
+                {{-- Close icon (shown when open) --}}
+                <svg x-show="chatOpen" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -rotate-90 scale-50" x-transition:enter-end="opacity-100 rotate-0 scale-100" class="bob-chatbot-fab-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        {{-- Chat Panel --}}
+        <div
+            x-show="chatOpen"
+            x-cloak
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-6 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-6 scale-95"
+            class="bob-chatbot-panel">
+
+            {{-- Iframe Container --}}
+            <div class="bob-chatbot-iframe-wrap" style="overflow: hidden; border-radius: 20px;">
+                <iframe 
+                    id="bob-chatbot-iframe"
+                    src="http://88.222.215.161:83/chatbot/8MFqPqF4sbx5PnJp?theme=light&themeOverrides=%7B%22primaryColor%22%3A%22%231a56db%22%2C%22radius%22%3A12%7D"
+                    frameborder="0"
+                    allow="microphone; color-scheme light"
+                    style="color-scheme: light; width: 100%; height: calc(100% + 55px); border: none;"
+                    title="BOB AI Assistant">
+                </iframe>
+            </div>
+        </div>
+    </div>
+
     @stack('scripts')
 </body>
 

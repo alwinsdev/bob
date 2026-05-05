@@ -19,6 +19,8 @@ window.auditLogsHub = function() {
             }
 
             this.gridOptions = {
+                // AG Grid v33+ requires explicit theme. 'legacy' keeps existing ag-grid.css.
+                theme: 'legacy',
                 rowModelType: 'infinite',
                 pagination: true,
                 paginationPageSize: 50,

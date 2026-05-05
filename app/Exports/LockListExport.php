@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\SanitizesSpreadsheetCells;
 use App\Models\LockList;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,6 +12,7 @@ use Maatwebsite\Excel\Concerns\Exportable;
 class LockListExport implements FromQuery, WithHeadings, WithMapping
 {
     use Exportable;
+    use SanitizesSpreadsheetCells;
 
     protected $search;
 
@@ -49,13 +51,13 @@ class LockListExport implements FromQuery, WithHeadings, WithMapping
 
     public function map($row): array
     {
-        return [
+        return $this->sanitizeRow([
             $row->policy_id,
             $row->agent_name,
             $row->department,
             $row->payee_name,
             $row->created_at?->format('Y-m-d'),
             $row->updated_at?->format('Y-m-d H:i'),
-        ];
+        ]);
     }
 }

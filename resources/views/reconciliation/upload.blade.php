@@ -42,7 +42,7 @@
                                     d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                             </svg>
                             <span
-                                x-text="uploadMode === 'contract' ? 'Back to Weekly Sync' : 'Upload Contract File'"></span>
+                                x-text="uploadMode === 'contract' ? 'Back to Weekly Sync' : 'Payee Back-Flow Analysis'"></span>
                         </button>
                         <select id="duplicate_strategy" name="duplicate_strategy" class="bob-select text-xs">
                             <option value="skip">Skip on Duplicate</option>
@@ -61,7 +61,7 @@
                                 Re-analysis Active</div>
                             <div class="text-[11px] text-slate-300 mt-1">
                                 Target Run <span class="font-mono text-blue-200"
-                                    x-text="`#${reanalysisTargetBatch.id}`"></span>
+                                    x-text="`#${reanalysisTargetBatch?.id ?? ''}`"></span>
                                 <span class="text-slate-500">·</span>
                                 Existing records for this run will be replaced.
                             </div>
@@ -435,23 +435,99 @@
                                 style="background:rgba(20,184,166,0.05);border-color:rgba(45,212,191,0.2);">
                                 <div class="flex items-center justify-between gap-3 mb-4">
                                     <div>
-                                        <h4 class="text-xs font-bold uppercase tracking-[0.12em] text-teal-300">Contract
-                                            Patch Engine</h4>
-                                        <p class="text-[11px] text-slate-400 mt-1">Upload a contract file to patch only
-                                            flagged House Open / House Close queue records by Contract ID.</p>
+                                        <h4 class="text-xs font-bold uppercase tracking-[0.12em] text-teal-300">Payee
+                                            Reconciliation Engine</h4>
+                                        <p class="text-[11px] text-slate-400 mt-1">Upload a contract file containing
+                                            missing payee records. The engine cross-verifies each row against all 5
+                                            source flows to trace, diagnose, and resolve missing payee attribution.</p>
                                     </div>
                                     <span class="text-[10px] font-bold tracking-widest px-2 py-1 rounded"
-                                        style="background:rgba(20,184,166,0.14);color:#5eead4;">Mid-Week Patch</span>
+                                        style="background:rgba(20,184,166,0.14);color:#5eead4;">Back-Flow
+                                        Analysis</span>
                                 </div>
 
-                                {{-- ── Step 1: Active Final BOB Run ────────────────── --}}
+                                {{-- ══════════════════════════════════════════════════════════
+                                     PREMIUM SINGLE-ROW CASCADE PIPELINE
+                                     ══════════════════════════════════════════════════════════ --}}
+                                <div class="bob-cascade-strip mb-4">
+                                    {{-- Scanning glow overlay --}}
+                                    <div class="bob-cascade-strip-glow"></div>
+
+                                    {{-- Lock List sentinel (leftmost) --}}
+                                    <div class="bob-cascade-node bob-cascade-node--lock shrink-0" title="Lock List entries bypass every cascade step — assignment is absolute.">
+                                        <div class="bob-cascade-node-icon">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        </div>
+                                        <span class="bob-cascade-node-label">Lock List</span>
+                                    </div>
+
+                                    {{-- Arrow --}}
+                                    <div class="bob-cascade-arrow">
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                    </div>
+
+                                    {{-- ① Final BOB --}}
+                                    <div class="bob-cascade-node bob-cascade-node--emerald" title="Source of Truth — matched by Contract ID.">
+                                        <div class="bob-cascade-node-rank">①</div>
+                                        <div class="bob-cascade-node-body">
+                                            <div class="bob-cascade-node-name">Final BOB</div>
+                                            <div class="bob-cascade-node-hint">ContractID</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bob-cascade-arrow"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></div>
+
+                                    {{-- ② Health Sherpa --}}
+                                    <div class="bob-cascade-node bob-cascade-node--teal" title="FFM marketplace — Email > Phone+Date > Phone.">
+                                        <div class="bob-cascade-node-rank">②</div>
+                                        <div class="bob-cascade-node-body">
+                                            <div class="bob-cascade-node-name">Health Sherpa</div>
+                                            <div class="bob-cascade-node-hint">Email · Phone</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bob-cascade-arrow"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></div>
+
+                                    {{-- ③ Payee Map --}}
+                                    <div class="bob-cascade-node bob-cascade-node--pink" title="Department / Agent dictionary lookup.">
+                                        <div class="bob-cascade-node-rank">③</div>
+                                        <div class="bob-cascade-node-body">
+                                            <div class="bob-cascade-node-name">Payee Map</div>
+                                            <div class="bob-cascade-node-hint">Dept · Agent</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bob-cascade-arrow"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></div>
+
+                                    {{-- ④ IMS --}}
+                                    <div class="bob-cascade-node bob-cascade-node--indigo" title="Internal heuristic — Email > Phone > Name > DOB+LastName.">
+                                        <div class="bob-cascade-node-rank">④</div>
+                                        <div class="bob-cascade-node-body">
+                                            <div class="bob-cascade-node-name">IMS</div>
+                                            <div class="bob-cascade-node-hint">Email · Name · DOB</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bob-cascade-arrow"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></div>
+
+                                    {{-- ⑤ Carrier BOB --}}
+                                    <div class="bob-cascade-node bob-cascade-node--amber" title="Last-resort fallback from original carrier feed.">
+                                        <div class="bob-cascade-node-rank">⑤</div>
+                                        <div class="bob-cascade-node-body">
+                                            <div class="bob-cascade-node-name">Carrier BOB</div>
+                                            <div class="bob-cascade-node-hint">Fallback</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- ── Step 1: Active Analysis Target ─────────────── --}}
                                 <div class="mb-4">
                                     <label class="bob-form-label text-teal-300 flex justify-between items-center mb-2">
                                         <span class="inline-flex items-center gap-1.5">
                                             <span
                                                 class="w-5 h-5 rounded-full text-[9px] font-black flex items-center justify-center shrink-0"
                                                 style="background:rgba(45,212,191,0.14);color:#5eead4;">1</span>
-                                            Active Target (Final BOB)
+                                            Active Target (Final BOB — Source of Truth)
                                         </span>
                                     </label>
                                     <template x-if="latestParentBatch">
@@ -475,7 +551,8 @@
                                                     </div>
                                                     <span
                                                         class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded text-teal-300"
-                                                        style="background: rgba(20,184,166,0.15);">Target Valid</span>
+                                                        style="background: rgba(20,184,166,0.15);">Analysis Target
+                                                        Valid</span>
                                                 </div>
                                                 <div
                                                     class="text-[10px] text-teal-400/80 mt-1 font-medium flex items-center gap-1.5">
@@ -485,7 +562,7 @@
                                                             d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                     <span
-                                                        x-text="`Auto-targeting latest processed Run (#${latestParentBatch.id})`"></span>
+                                                        x-text="`Auto-targeting latest processed Run (#${latestParentBatch.id}) — all 5 source feeds will be probed`"></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -504,7 +581,8 @@
                                             </div>
                                             <div
                                                 class="text-[10px] text-rose-400/80 mt-1.5 leading-relaxed font-medium">
-                                                You must complete a standard synchronization first. If a sync is
+                                                You must complete a standard synchronization first before running a
+                                                payee back-flow analysis. If a sync is
                                                 currently running, wait for it to finish.</div>
                                         </div>
                                     </template>
@@ -521,29 +599,42 @@
                                                     Progress</div>
                                                 <div
                                                     class="text-[9px] text-amber-500/80 mt-0.5 font-medium leading-relaxed">
-                                                    A main synchronization is currently running. You cannot apply a
-                                                    contract patch until it generates the Final BOB output.</div>
+                                                    A main synchronization is currently running. Wait for it to finish
+                                                    before running the payee back-flow analysis.</div>
                                             </div>
                                         </div>
                                     </template>
                                     <p class="text-[10px] text-slate-500 mt-2.5">
-                                        The patch run automatically processes against the most recent successful Final
-                                        BOB run.
+                                        The analysis engine automatically probes the most recent successful Final BOB
+                                        run and all its attached source feeds (Carrier, IMS, Health Sherpa, Payee Map).
                                     </p>
                                 </div>
 
-                                {{-- ── Step 2: Upload Contract File ─────────────────────── --}}
+                                {{-- ── Step 2: Upload Missing Payee File ────────────────── --}}
                                 <label class="bob-form-label text-teal-300 flex justify-between items-center mb-2">
                                     <span class="inline-flex items-center gap-1.5">
                                         <span
                                             class="w-5 h-5 rounded-full text-[9px] font-black flex items-center justify-center shrink-0"
                                             style="background:rgba(45,212,191,0.14);color:#5eead4;">2</span>
-                                        Contract File
+                                        Missing Payee Contract File
                                         <span class="text-[10px] font-bold tracking-wider ml-1 px-1.5 py-0.5 rounded"
                                             style="background:rgba(45,212,191,0.14);color:#5eead4;"
                                             x-text="reanalysisMode ? 'Optional' : 'Required'"></span>
                                     </span>
                                 </label>
+                                {{-- Required columns hint --}}
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
+                                    <span class="text-[9px] font-bold tracking-widest text-slate-500 uppercase">Required
+                                        columns:</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                                        style="background:rgba(45,212,191,0.08);color:#5eead4;">Contract ID</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                                        style="background:rgba(45,212,191,0.08);color:#5eead4;">First Name</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                                        style="background:rgba(45,212,191,0.08);color:#5eead4;">Last Name</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                                        style="background:rgba(45,212,191,0.08);color:#5eead4;">Mobile</span>
+                                </div>
 
                                 <p x-show="reanalysisMode" x-cloak class="text-[10px] text-slate-500 mb-2">
                                     Current stored file:
@@ -563,8 +654,9 @@
                                                     d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                             </svg>
                                             <p class="text-xs"><span class="font-bold text-teal-300">Browse</span> or
-                                                drag &amp; drop contract patch file</p>
-                                            <p class="text-[10px] mt-1 text-slate-500">CSV / XLSX — up to 30 MB</p>
+                                                drag &amp; drop missing payee file</p>
+                                            <p class="text-[10px] mt-1 text-slate-500">CSV / XLSX — up to 30 MB · Must
+                                                include Contract ID, First Name, Last Name, Mobile</p>
                                         </div>
                                     </template>
                                     <template x-if="contractFileName">
@@ -598,13 +690,14 @@
 
                                 <div class="mt-3 rounded-lg border px-3 py-2"
                                     style="background:rgba(15,23,42,0.36);border-color:rgba(45,212,191,0.2);">
-                                    <div class="text-[10px] font-bold uppercase tracking-widest text-teal-300">Patch
+                                    <div class="text-[10px] font-bold uppercase tracking-widest text-teal-300">Analysis
                                         Scope</div>
-                                    <p class="text-[11px] text-slate-400 mt-1">Only records currently flagged as House
-                                        Open
-                                        or House Close will be updated. The patch workbook is always attached to the
-                                        latest
-                                        processed Final BOB run.</p>
+                                    <p class="text-[11px] text-slate-400 mt-1">For each row in your upload, the engine
+                                        traces the Contract ID and subscriber identity (First Name, Last Name, Mobile)
+                                        across all 5 source feeds. Where a payee is found, it is resolved and written to
+                                        the output. Each row includes a <span
+                                            class="text-teal-300 font-medium">diagnosis column</span> indicating exactly
+                                        which source yielded the match — or why it failed.</p>
                                 </div>
 
                                 {{-- Engine Readiness for Contract --}}
@@ -638,16 +731,16 @@
                                                         stroke-linejoin="round"
                                                         d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                                                 </svg>
-                                                Contract File
+                                                Missing Payee File
                                             </span>
                                         </div>
                                     </div>
                                     <div class="shrink-0 text-[10px] font-medium"
                                         :class="isContractReady ? 'text-teal-400' : 'text-amber-400'" x-text="isContractReady
-                                            ? (reanalysisMode ? '✓ Ready to re-analyze' : '✓ Ready to patch')
+                                            ? (reanalysisMode ? '✓ Ready to re-analyze' : '✓ Ready to run analysis')
                                             : (reanalysisMode
-                                                ? 'Upload replacement contract file or keep existing source'
-                                                : 'Need latest Final BOB + contract file')">
+                                                ? 'Upload replacement file or keep existing source'
+                                                : 'Need latest Final BOB + missing payee file')">
                                     </div>
                                 </div>
                             </div>
@@ -683,8 +776,8 @@
                         <div class="flex items-center justify-between pt-4 border-t border-white/5">
                             <p class="text-[11px] text-slate-600" x-text="uploadMode === 'contract'
                             ? (reanalysisMode
-                                ? 'This contract patch run will be reprocessed in place. Existing contract file is reused unless you upload a replacement.'
-                                : 'Contract patch runs resolve flagged House Open/House Close records and generate a separate patch workbook.')
+                                ? 'This back-flow analysis will be reprocessed in place. Existing contract file is reused unless you upload a replacement.'
+                                : 'The cascade probes ① Final BOB → ② Health Sherpa → ③ Payee Map → ④ IMS → ⑤ Carrier BOB in reverse priority order. The first definitive payee match wins and every row receives a full diagnosis trace.')
                             : (reanalysisMode
                                 ? 'This run will be reprocessed in place. Existing files are reused unless you upload replacements.'
                                 : 'The engine will try IMS first, then Health Sherpa for any unmatched rows.')"></p>
@@ -698,10 +791,10 @@
                                 </svg>
                                 <span x-text="isSubmitting
                                 ? (uploadMode === 'contract'
-                                    ? (reanalysisMode ? 'Starting Re-analysis...' : 'Starting Contract Patch...')
+                                    ? (reanalysisMode ? 'Starting Re-analysis...' : 'Starting Payee Analysis...')
                                     : (reanalysisMode ? 'Starting Re-analysis...' : 'Starting ETL Flow...'))
                                 : (uploadMode === 'contract'
-                                    ? (reanalysisMode ? 'Run In-place Re-analysis' : 'Run Contract Patch')
+                                    ? (reanalysisMode ? 'Run In-place Re-analysis' : 'Run Payee Back-Flow Analysis')
                                     : (reanalysisMode ? 'Run In-place Re-analysis' : 'Run Synchronization'))"></span>
                             </button>
                         </div>
@@ -721,19 +814,20 @@
                             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                                 <div>
                                     <div class="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-300"
-                                        x-text="isContractLiveBatch() ? 'Live Contract Patch' : 'Live ETL Flow'"></div>
+                                        x-text="isContractLiveBatch() ? 'Live Payee Back-Flow Analysis' : 'Live ETL Flow'">
+                                    </div>
                                     <div class="text-xs font-semibold text-slate-200 mt-1">
                                         Run <span class="font-mono" x-text="liveFlowRunText()"></span>
                                         <span class="mx-1 text-slate-500">·</span>
-                                        <span x-text="liveEtlBatch.status_label || 'Pending'"></span>
+                                        <span x-text="liveEtlBatch?.status_label || 'Pending'"></span>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2 mt-2 text-[10px] font-semibold">
                                         <span x-show="!isContractLiveBatch()"
                                             class="bob-badge bob-badge-resolved text-[10px] tracking-wider">COMBINED</span>
                                         <span x-show="isContractLiveBatch()"
                                             class="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded"
-                                            style="background:rgba(20,184,166,0.14);color:#5eead4;">CONTRACT
-                                            PATCH</span>
+                                            style="background:rgba(20,184,166,0.14);color:#5eead4;">PAYEE
+                                            ANALYSIS</span>
                                         <span class="text-slate-500" x-text="liveFlowDateText()"></span>
                                         <span class="text-slate-600">·</span>
                                         <span class="text-slate-500">by <span
@@ -790,103 +884,141 @@
                             </template>
 
                             <template x-if="isContractLiveBatch()">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
-                                    <div class="bob-etl-stage" :class="stageClass('upload')">
-                                        <div class="bob-etl-stage-dot" :class="stageDotClass('upload')"></div>
-                                        <div>
-                                            <div class="bob-etl-stage-title">Contract Upload</div>
-                                            <div class="bob-etl-stage-state" x-text="stageStateText('upload')"></div>
-                                        </div>
-                                    </div>
-                                    <div class="bob-etl-stage" :class="stageClass('contract_scan')">
-                                        <div class="bob-etl-stage-dot" :class="stageDotClass('contract_scan')"></div>
-                                        <div>
-                                            <div class="bob-etl-stage-title">Flagged Scan</div>
-                                            <div class="bob-etl-stage-state" x-text="stageStateText('contract_scan')">
+                                <div x-data="{
+                                    /*
+                                     * Stage map mirrors backend buildAnalysisLookupMaps() ordering:
+                                     *   0 = Upload accepted
+                                     *   1 = ① Final BOB        (Source of Truth)
+                                     *   2 = ② Health Sherpa    (FFM marketplace)
+                                     *   3 = ③ Payee Map        (Department / Agent dictionary)
+                                     *   4 = ④ IMS              (Internal heuristic)
+                                     *   5 = ⑤ Carrier BOB      (Last-resort fallback)
+                                     *   6 = Maps ready / counting input rows
+                                     *   7 = Cascading rows
+                                     *   8 = Workbook ready / batch complete
+                                     */
+                                    analysisStep() {
+                                        // Guard against null liveEtlBatch — the wrapping template
+                                        // x-if hides this block but Alpine still evaluates the
+                                        // expression once before unmount, so chain safely.
+                                        const l = (liveEtlBatch?.status_label || '').toLowerCase();
+                                        const s = liveEtlBatch?.status || '';
+                                        if (['completed','completed_with_errors'].includes(s)) return 9;
+                                        if (s === 'failed') return -1;
+                                        if (l.includes('final bob'))    return 1;
+                                        if (l.includes('health sherpa') || l.includes('sherpa')) return 2;
+                                        if (l.includes('payee map') || (l.includes('payee') && !l.includes('payee back'))) return 3;
+                                        if (l.includes('ims'))          return 4;
+                                        if (l.includes('carrier'))      return 5;
+                                        if (l.includes('maps ready') || l.includes('counting')) return 6;
+                                        if (l.includes('cascading') || l.includes('analysing')) return 7;
+                                        return 0;
+                                    },
+                                    ss(i) {
+                                        const c = this.analysisStep();
+                                        if (c === -1) return 'failed';
+                                        return i < c ? 'done' : (i === c ? 'active' : 'queued');
+                                    },
+                                    steps: [
+                                        { idx: 0, label: 'Upload',        sub: 'File received',       activeText: 'Uploading...',     doneText: 'Complete' },
+                                        { idx: 1, label: 'Final BOB',     sub: '① Source of Truth',   activeText: 'Indexing...',      doneText: 'Indexed' },
+                                        { idx: 2, label: 'Health Sherpa', sub: '② FFM Marketplace',   activeText: 'Indexing...',      doneText: 'Indexed' },
+                                        { idx: 3, label: 'Payee Map',     sub: '③ Dictionary',        activeText: 'Indexing...',      doneText: 'Indexed' },
+                                        { idx: 4, label: 'IMS',           sub: '④ Internal',          activeText: 'Indexing...',      doneText: 'Indexed' },
+                                        { idx: 5, label: 'Carrier BOB',   sub: '⑤ Fallback',          activeText: 'Indexing...',      doneText: 'Indexed' },
+                                        { idx: 7, label: 'Cascade',       sub: 'Resolving rows',      activeText: 'Cascading...',     doneText: 'Complete' },
+                                        { idx: 8, label: 'Workbook',      sub: 'Diagnosed XLSX',      activeText: 'Generating...',    doneText: 'Ready' },
+                                    ]
+                                }">
+                                    {{-- ── Premium Pipeline Stepper ── --}}
+                                    <div class="payee-pipeline">
+                                        <template x-for="(step, i) in steps" :key="step.idx">
+                                            <div class="payee-pipeline-item" :class="{
+                                                    'is-done':   ss(step.idx) === 'done',
+                                                    'is-active': ss(step.idx) === 'active',
+                                                    'is-failed': ss(step.idx) === 'failed',
+                                                }">
+                                                {{-- Connector line (not on first) --}}
+                                                <div class="payee-pipeline-connector" x-show="i > 0"
+                                                    :class="{ 'is-filled': ss(step.idx) === 'done' || ss(step.idx) === 'active' }">
+                                                </div>
+                                                {{-- Badge circle --}}
+                                                <div class="payee-pipeline-badge" :class="{
+                                                        'is-done':   ss(step.idx) === 'done',
+                                                        'is-active': ss(step.idx) === 'active',
+                                                        'is-failed': ss(step.idx) === 'failed',
+                                                    }">
+                                                    <template x-if="ss(step.idx) === 'done'">
+                                                        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20"
+                                                            fill="currentColor">
+                                                            <path fill-rule="evenodd"
+                                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                clip-rule="evenodd" />
+                                                        </svg>
+                                                    </template>
+                                                    <template x-if="ss(step.idx) === 'active'">
+                                                        <div class="payee-pipeline-spinner"></div>
+                                                    </template>
+                                                    <template x-if="ss(step.idx) === 'queued'">
+                                                        <span class="text-[9px] font-bold" x-text="i + 1"></span>
+                                                    </template>
+                                                    <template x-if="ss(step.idx) === 'failed'">
+                                                        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20"
+                                                            fill="currentColor">
+                                                            <path fill-rule="evenodd"
+                                                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                clip-rule="evenodd" />
+                                                        </svg>
+                                                    </template>
+                                                </div>
+                                                {{-- Label --}}
+                                                <div class="payee-pipeline-label" x-text="step.label"></div>
+                                                {{-- Priority sub-label (e.g. "① Source of Truth") --}}
+                                                <div class="payee-pipeline-priority text-[9px] font-bold tracking-wider uppercase text-slate-500 mt-0.5" x-text="step.sub"></div>
+                                                {{-- Sub-state --}}
+                                                <div class="payee-pipeline-state" :class="{
+                                                        'text-emerald-400': ss(step.idx) === 'done',
+                                                        'text-sky-400':     ss(step.idx) === 'active',
+                                                        'text-rose-400':    ss(step.idx) === 'failed',
+                                                        'text-slate-500':   ss(step.idx) === 'queued',
+                                                    }"
+                                                    x-text="ss(step.idx)==='done' ? step.doneText : (ss(step.idx)==='active' ? (step.idx===7 ? (liveEtlBatch?.status_label || 'Processing...') : step.activeText) : (ss(step.idx)==='failed' ? 'Failed' : 'Queued'))">
+                                                </div>
                                             </div>
-                                        </div>
+                                        </template>
                                     </div>
-                                    <div class="bob-etl-stage" :class="stageClass('contract_apply')">
-                                        <div class="bob-etl-stage-dot" :class="stageDotClass('contract_apply')"></div>
-                                        <div>
-                                            <div class="bob-etl-stage-title">Patch Apply</div>
-                                            <div class="bob-etl-stage-state" x-text="stageStateText('contract_apply')">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="bob-etl-stage" :class="stageClass('contract_finalize')">
-                                        <div class="bob-etl-stage-dot" :class="stageDotClass('contract_finalize')">
-                                        </div>
-                                        <div>
-                                            <div class="bob-etl-stage-title">Patch Workbook</div>
-                                            <div class="bob-etl-stage-state"
-                                                x-text="stageStateText('contract_finalize')">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
 
-                            <template x-if="!isContractLiveBatch()">
-                                <div class="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mt-3">
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Scanned</div>
-                                        <div class="bob-etl-metric-value"
-                                            x-text="`${Number(liveEtlBatch.processed_records || 0)}/${Number(liveEtlBatch.total_records || 0)}`">
+                                    {{-- ── Metrics Row ── --}}
+                                    <div class="grid grid-cols-2 lg:grid-cols-6 gap-2 mt-3">
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">Analysed</div>
+                                            <div class="bob-etl-metric-value"
+                                                x-text="`${Number(liveEtlBatch?.processed_records || 0)}/${Number(liveEtlBatch?.total_records || 0)}`">
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">IMS Matched</div>
-                                        <div class="bob-etl-metric-value"
-                                            x-text="Number(liveEtlBatch.ims_matched_records || 0)"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">HS Matched</div>
-                                        <div class="bob-etl-metric-value"
-                                            x-text="Number(liveEtlBatch.hs_matched_records || 0)"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Rate</div>
-                                        <div class="bob-etl-metric-value" x-text="liveRateText()"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">ETA</div>
-                                        <div class="bob-etl-metric-value" x-text="liveEtaText()"></div>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <template x-if="isContractLiveBatch()">
-                                <div class="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mt-3">
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Scanned</div>
-                                        <div class="bob-etl-metric-value"
-                                            x-text="`${Number(liveEtlBatch.processed_records || 0)}/${Number(liveEtlBatch.total_records || 0)}`">
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">Resolved</div>
+                                            <div class="bob-etl-metric-value text-teal-400"
+                                                x-text="Number(liveEtlBatch?.contract_patched_records || 0)"></div>
                                         </div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Patched</div>
-                                        <div class="bob-etl-metric-value text-indigo-400"
-                                            x-text="Number(liveEtlBatch.contract_patched_records || 0)"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Skipped</div>
-                                        <div class="bob-etl-metric-value text-slate-400"
-                                            x-text="Number(liveEtlBatch.skipped_records || 0)"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Failed</div>
-                                        <div class="bob-etl-metric-value text-rose-400"
-                                            x-text="Number(liveEtlBatch.failed_records || 0)">
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">Unresolved</div>
+                                            <div class="bob-etl-metric-value text-amber-400"
+                                                x-text="Number(liveEtlBatch?.skipped_records || 0)"></div>
                                         </div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">Rate</div>
-                                        <div class="bob-etl-metric-value" x-text="liveRateText()"></div>
-                                    </div>
-                                    <div class="bob-etl-metric-card">
-                                        <div class="bob-etl-metric-label">ETA</div>
-                                        <div class="bob-etl-metric-value" x-text="liveEtaText()"></div>
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">Failed</div>
+                                            <div class="bob-etl-metric-value text-rose-400"
+                                                x-text="Number(liveEtlBatch?.failed_records || 0)"></div>
+                                        </div>
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">Rate</div>
+                                            <div class="bob-etl-metric-value" x-text="liveRateText()"></div>
+                                        </div>
+                                        <div class="bob-etl-metric-card">
+                                            <div class="bob-etl-metric-label">ETA</div>
+                                            <div class="bob-etl-metric-value" x-text="liveEtaText()"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </template>
@@ -3144,6 +3276,190 @@
                 display: none !important;
             }
 
+            /* ── Premium single-row cascade pipeline ──────────────────── */
+            .bob-cascade-strip {
+                display: flex;
+                align-items: stretch;
+                gap: 0;
+                padding: 8px 10px;
+                border-radius: 12px;
+                background: linear-gradient(145deg, rgba(15,23,42,0.55), rgba(30,41,59,0.35));
+                border: 1px solid rgba(99,102,241,0.16);
+                position: relative;
+                overflow: hidden;
+            }
+            .bob-cascade-strip::-webkit-scrollbar { display: none; }
+
+            /* Animated scanning glow */
+            .bob-cascade-strip-glow {
+                position: absolute;
+                inset: 0;
+                width: 30%;
+                background: linear-gradient(90deg,
+                    transparent,
+                    rgba(99,102,241,0.08),
+                    rgba(45,212,191,0.06),
+                    transparent
+                );
+                animation: cascade-scan 4s ease-in-out infinite;
+                pointer-events: none;
+                z-index: 0;
+            }
+            @keyframes cascade-scan {
+                0%   { transform: translateX(-100%); }
+                100% { transform: translateX(400%); }
+            }
+
+            /* Individual pipeline node — flex:1 to fill width evenly */
+            .bob-cascade-node {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 7px 8px;
+                border-radius: 8px;
+                position: relative;
+                z-index: 1;
+                white-space: nowrap;
+                cursor: help;
+                transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+                flex: 1 1 0%;
+                min-width: 0;
+            }
+            .bob-cascade-node:hover {
+                transform: translateY(-1px) scale(1.02);
+                filter: brightness(1.2);
+            }
+
+            /* Rank circle */
+            .bob-cascade-node-rank {
+                width: 20px;
+                height: 20px;
+                border-radius: 6px;
+                font-size: 10px;
+                font-weight: 900;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                line-height: 1;
+            }
+            .bob-cascade-node-body { min-width: 0; }
+            .bob-cascade-node-name {
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                line-height: 1.1;
+            }
+            .bob-cascade-node-hint {
+                font-size: 8px;
+                margin-top: 1px;
+                opacity: 0.7;
+                font-weight: 600;
+            }
+
+            /* Lock List sentinel - Professional */
+            .bob-cascade-node-icon {
+                width: 20px;
+                height: 20px;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background: rgba(15, 23, 42, 0.6); /* slate-900 */
+                color: #94a3b8; /* slate-400 */
+            }
+            .bob-cascade-node-label {
+                font-size: 9px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: #e2e8f0; /* slate-200 */
+            }
+            .bob-cascade-node--lock {
+                background: rgba(30, 41, 59, 0.6); /* slate-800 */
+                border: 1px solid rgba(71, 85, 105, 0.5); /* slate-600 */
+                flex: 0 0 auto;
+            }
+            .bob-cascade-node--lock:hover {
+                box-shadow: 0 0 12px rgba(148, 163, 184, 0.15);
+                background: rgba(51, 65, 85, 0.6); /* slate-700 */
+                border-color: rgba(100, 116, 139, 0.6);
+            }
+
+            /* Unified Professional Variants */
+            .bob-cascade-node--emerald,
+            .bob-cascade-node--teal,
+            .bob-cascade-node--pink,
+            .bob-cascade-node--indigo,
+            .bob-cascade-node--amber {
+                background: rgba(30, 41, 59, 0.6);
+                border: 1px solid rgba(71, 85, 105, 0.5);
+            }
+            .bob-cascade-node--emerald .bob-cascade-node-rank,
+            .bob-cascade-node--teal .bob-cascade-node-rank,
+            .bob-cascade-node--pink .bob-cascade-node-rank,
+            .bob-cascade-node--indigo .bob-cascade-node-rank,
+            .bob-cascade-node--amber .bob-cascade-node-rank { 
+                background: rgba(15, 23, 42, 0.6);
+                color: #94a3b8;
+            }
+            .bob-cascade-node--emerald .bob-cascade-node-name,
+            .bob-cascade-node--teal .bob-cascade-node-name,
+            .bob-cascade-node--pink .bob-cascade-node-name,
+            .bob-cascade-node--indigo .bob-cascade-node-name,
+            .bob-cascade-node--amber .bob-cascade-node-name { 
+                color: #e2e8f0;
+            }
+            .bob-cascade-node--emerald .bob-cascade-node-hint,
+            .bob-cascade-node--teal .bob-cascade-node-hint,
+            .bob-cascade-node--pink .bob-cascade-node-hint,
+            .bob-cascade-node--indigo .bob-cascade-node-hint,
+            .bob-cascade-node--amber .bob-cascade-node-hint { 
+                color: #94a3b8;
+            }
+            .bob-cascade-node--emerald:hover,
+            .bob-cascade-node--teal:hover,
+            .bob-cascade-node--pink:hover,
+            .bob-cascade-node--indigo:hover,
+            .bob-cascade-node--amber:hover { 
+                box-shadow: 0 0 12px rgba(148, 163, 184, 0.15); 
+                background: rgba(51, 65, 85, 0.6);
+                border-color: rgba(100, 116, 139, 0.6);
+            }
+
+            /* Arrow connector — fixed width, does not grow */
+            .bob-cascade-arrow {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 1px;
+                color: rgba(148,163,184,0.30);
+                flex: 0 0 auto;
+                z-index: 1;
+            }
+            .bob-cascade-arrow svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            /* Responsive: on small screens stack vertically */
+            @media (max-width: 768px) {
+                .bob-cascade-strip {
+                    flex-wrap: wrap;
+                    gap: 4px;
+                    justify-content: center;
+                }
+                .bob-cascade-node {
+                    flex: 0 1 auto;
+                }
+                .bob-cascade-arrow {
+                    display: none;
+                }
+            }
+
             @keyframes bob-processing-pulse {
 
                 0%,
@@ -3358,6 +3674,142 @@
                 font-weight: 800;
                 color: #e2e8f0;
                 line-height: 1;
+            }
+
+            /* ═══════════════════════════════════════════════════════════════
+                   PREMIUM PAYEE ANALYSIS PIPELINE
+                   ═══════════════════════════════════════════════════════════════ */
+            .payee-pipeline {
+                display: flex;
+                align-items: flex-start;
+                gap: 0;
+                overflow-x: auto;
+                padding: 4px 0;
+            }
+
+            .payee-pipeline-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                flex: 1;
+                min-width: 80px;
+                position: relative;
+                text-align: center;
+            }
+
+            /* Connector line between badges */
+            .payee-pipeline-connector {
+                position: absolute;
+                top: 15px;
+                right: 50%;
+                width: 100%;
+                height: 2px;
+                background: rgba(71, 85, 105, 0.5);
+                z-index: 0;
+                transition: background 400ms ease;
+            }
+
+            .payee-pipeline-connector.is-filled {
+                background: linear-gradient(90deg, #34d399, #60a5fa);
+            }
+
+            /* Badge circle */
+            .payee-pipeline-badge {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: 800;
+                color: #64748b;
+                background: rgba(30, 41, 59, 0.8);
+                border: 2px solid rgba(71, 85, 105, 0.5);
+                position: relative;
+                z-index: 1;
+                transition: all 300ms ease;
+                backdrop-filter: blur(8px);
+            }
+
+            .payee-pipeline-badge.is-done {
+                background: linear-gradient(135deg, #059669, #10b981);
+                border-color: #34d399;
+                color: #fff;
+                box-shadow: 0 0 12px rgba(16, 185, 129, 0.35), 0 0 0 4px rgba(16, 185, 129, 0.08);
+            }
+
+            .payee-pipeline-badge.is-active {
+                background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+                border-color: #60a5fa;
+                color: #fff;
+                box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.1);
+                animation: payee-badge-pulse 1.8s ease-in-out infinite;
+            }
+
+            .payee-pipeline-badge.is-failed {
+                background: linear-gradient(135deg, #9f1239, #e11d48);
+                border-color: #fb7185;
+                color: #fff;
+                box-shadow: 0 0 12px rgba(225, 29, 72, 0.35);
+            }
+
+            @keyframes payee-badge-pulse {
+
+                0%,
+                100% {
+                    box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.1);
+                }
+
+                50% {
+                    box-shadow: 0 0 24px rgba(59, 130, 246, 0.6), 0 0 0 8px rgba(59, 130, 246, 0.15);
+                }
+            }
+
+            /* Spinner inside active badge */
+            .payee-pipeline-spinner {
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: payee-spin 0.7s linear infinite;
+            }
+
+            @keyframes payee-spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Labels below badge */
+            .payee-pipeline-label {
+                margin-top: 6px;
+                font-size: 9px;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: #cbd5e1;
+                white-space: nowrap;
+            }
+
+            .payee-pipeline-item.is-active .payee-pipeline-label {
+                color: #93c5fd;
+            }
+
+            .payee-pipeline-item.is-done .payee-pipeline-label {
+                color: #6ee7b7;
+            }
+
+            .payee-pipeline-item.is-failed .payee-pipeline-label {
+                color: #fda4af;
+            }
+
+            .payee-pipeline-state {
+                margin-top: 2px;
+                font-size: 8px;
+                font-weight: 700;
+                letter-spacing: 0.02em;
             }
 
             .bob-etl-event-box {

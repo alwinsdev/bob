@@ -39,6 +39,18 @@ class ContractPatchLog extends Model
 
     protected $table = 'contract_patch_logs';
 
+    /**
+     * Narrow fillable surface — operator identity, change_type, and flag_value
+     * are NEVER user-supplied. They are set by the ETL service via explicit
+     * attribute assignment (`$model->updated_by = ...; $model->save()`),
+     * never via `Model::create($request->validated())`. This guards against
+     * a future controller accidentally allowing audit-trail tampering
+     * (false `updated_by`, falsified `change_type=analysis_resolved`).
+     *
+     * If you need to add a new field that IS user-supplied, add it here.
+     * If you need to set an audit field, use explicit attribute assignment
+     * inside a service — see ReconciliationETLService::persistContractPatchLog.
+     */
     protected $fillable = [
         'contract_id',
         'batch_id',
@@ -54,10 +66,13 @@ class ContractPatchLog extends Model
         'new_department',
         'old_match_source',
         'new_match_source',
-        'flag_value',
-        'change_type',
-        'updated_by',
+        'match_key',
+        'diagnosis',
         'queue_record_id',
+        // ── Audit / system-managed fields (NOT fillable) ────────────────
+        // 'flag_value'   — set explicitly by patch engine
+        // 'change_type'  — set explicitly by patch engine
+        // 'updated_by'   — set from auth() context, never from request
     ];
 
     /** The contract patch ImportBatch that created this entry. */

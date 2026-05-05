@@ -163,11 +163,15 @@
 
                     this.gridOptions = {
                         columnDefs: colDefs,
+                        // AG Grid v33+ requires explicit theme. 'legacy' keeps the
+                        // existing ag-grid.css styles (resolves console error #239).
+                        theme: 'legacy',
                         rowModelType: 'infinite',
                         rowHeight: 56,
                         headerHeight: 52,
                         pagination: true,
                         paginationPageSize: 100,
+                        paginationPageSizeSelector: [25, 50, 100, 250],
                         cacheBlockSize: 100,
                         maxBlocksInCache: 10,
                         suppressCellFocus: true,

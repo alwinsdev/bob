@@ -124,7 +124,16 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $this->command->info('✅ RBAC seeded: 9 permissions, 4 roles with proper hierarchy.');
 
-        // ── 4. Create Demo Users ─────────────────────────────────────────────
+        // ── 4. Create Demo Users (LOCAL/TESTING ONLY) ───────────────────────
+        // Demo accounts use the literal password "password". Running this seeder
+        // in any non-local environment would create instant-compromise credentials
+        // (admin@bob.test / password) that any attacker can use. Never seed here
+        // outside development.
+        if (!app()->environment(['local', 'testing'])) {
+            $this->command->warn('⚠️  Demo user creation skipped — RBAC roles still seeded. Bootstrap an admin via a separate, secret-driven seeder for production.');
+            return;
+        }
+
         $analyst = User::firstOrCreate(['email' => 'analyst@bob.test'], [
             'name' => 'Data Analyst',
             'email_verified_at' => now(),

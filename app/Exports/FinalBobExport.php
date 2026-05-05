@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\SanitizesSpreadsheetCells;
 use App\Models\ReconciliationQueue;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,6 +12,7 @@ use Maatwebsite\Excel\Concerns\Exportable;
 class FinalBobExport implements FromQuery, WithHeadings, WithMapping
 {
     use Exportable;
+    use SanitizesSpreadsheetCells;
 
     protected $search;
     protected $batchId;
@@ -60,7 +62,7 @@ class FinalBobExport implements FromQuery, WithHeadings, WithMapping
 
     public function map($row): array
     {
-        return [
+        return $this->sanitizeRow([
             $row->contract_id,
             trim($row->member_first_name . ' ' . $row->member_last_name),
             $row->aligned_agent_name,
@@ -68,6 +70,6 @@ class FinalBobExport implements FromQuery, WithHeadings, WithMapping
             $row->payee_name,
             $row->match_method_label,
             $row->override_flag ? 'YES' : 'NO',
-        ];
+        ]);
     }
 }

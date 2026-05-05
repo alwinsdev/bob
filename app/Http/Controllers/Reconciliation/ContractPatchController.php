@@ -53,7 +53,7 @@ class ContractPatchController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Contract patch run started. Results and progress will appear in the "Associated Contract Patches" section of the related BOB run.',
+            'message' => 'Payee Back-Flow Analysis started. Results will appear in the "Associated Contract Patches" section of the related BOB run.',
             'batch'   => $this->batchSerializer->serialize($batch, true, $request->user()),
             'target_parent_batch_id' => $latestProcessedParent->id,
         ], 202);
@@ -69,7 +69,7 @@ class ContractPatchController extends Controller
         $fullPath = Storage::disk('local')->path($batch->output_file_path);
         abort_unless(file_exists($fullPath), 404, 'Output file not found on disk.');
 
-        $downloadName = 'Contract_Patch_' . $batch->created_at->format('Y-m-d') . '.xlsx';
+        $downloadName = 'Payee_Analysis_' . $batch->created_at->format('Y-m-d') . '.xlsx';
 
         return response()->download($fullPath, $downloadName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

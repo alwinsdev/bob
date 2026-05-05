@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\SanitizesSpreadsheetCells;
 use App\Models\ReconciliationQueue;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,6 +12,7 @@ use Maatwebsite\Excel\Concerns\Exportable;
 class ReconciliationExport implements FromQuery, WithHeadings, WithMapping
 {
     use Exportable;
+    use SanitizesSpreadsheetCells;
 
     protected $status;
     protected $search;
@@ -60,7 +62,7 @@ class ReconciliationExport implements FromQuery, WithHeadings, WithMapping
 
     public function map($record): array
     {
-        return [
+        return $this->sanitizeRow([
             $record->id,
             ucfirst($record->status),
             $record->contract_id,
@@ -72,6 +74,6 @@ class ReconciliationExport implements FromQuery, WithHeadings, WithMapping
             $record->effective_date ? $record->effective_date->format('m/d/Y') : '—',
             $record->ims_transaction_id ?: '—',
             $record->created_at->format('Y-m-d H:i:s'),
-        ];
+        ]);
     }
 }

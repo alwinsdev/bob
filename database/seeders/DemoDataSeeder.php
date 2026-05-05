@@ -15,6 +15,14 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
+        // Demo data uses synthetic PII (faker emails/phones) and bypasses encrypted
+        // model casts via raw inserts. Running this in production would normalize
+        // insecure storage patterns and pollute live data. Local/testing only.
+        if (!app()->environment(['local', 'testing'])) {
+            $this->command->warn('⚠️  DemoDataSeeder skipped — non-local environment.');
+            return;
+        }
+
         $faker = Faker::create('en_US');
         $manager = User::where('email', 'manager@bob.test')->first();
         $analyst = User::where('email', 'analyst@bob.test')->first();

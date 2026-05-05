@@ -38,6 +38,8 @@ class ContractPatchReportingController extends Controller
             'limit' => ['nullable', 'integer', 'min:1', 'max:250'],
             'search' => ['nullable', 'string', 'max:120'],
             'sortModel' => ['nullable', 'string'],
+            'status_filter' => ['nullable', 'string', 'in:all,resolved,unresolved,lock_override,failed'],
+            'source_filter' => ['nullable', 'string', 'max:50'],
         ]);
 
         $parentBatches = $this->parentBatchOptions();
@@ -62,18 +64,42 @@ class ContractPatchReportingController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($builder) use ($search) {
-                $builder->where('contract_id', 'like', "%{$search}%")
-                    ->orWhere('old_agent_name', 'like', "%{$search}%")
-                    ->orWhere('new_agent_name', 'like', "%{$search}%")
-                    ->orWhere('old_payee_name', 'like', "%{$search}%")
-                    ->orWhere('new_payee_name', 'like', "%{$search}%")
-                    ->orWhere('old_department', 'like', "%{$search}%")
-                    ->orWhere('new_department', 'like', "%{$search}%")
-                    ->orWhereHas('operator', function ($operatorQuery) use ($search) {
-                        $operatorQuery->where('name', 'like', "%{$search}%");
+            // Escape LIKE wildcards (`%`, `_`) and the escape char itself so a user
+            // searching for "%" doesn't trigger a 10-column full-table scan DoS.
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $query->where(function ($builder) use ($like) {
+                $builder->where('contract_id', 'like', $like)
+                    ->orWhere('old_agent_name', 'like', $like)
+                    ->orWhere('new_agent_name', 'like', $like)
+                    ->orWhere('old_payee_name', 'like', $like)
+                    ->orWhere('new_payee_name', 'like', $like)
+                    ->orWhere('old_department', 'like', $like)
+                    ->orWhere('new_department', 'like', $like)
+                    ->orWhere('new_match_source', 'like', $like)
+                    ->orWhere('match_key', 'like', $like)
+                    ->orWhere('diagnosis', 'like', $like)
+                    ->orWhereHas('operator', function ($operatorQuery) use ($like) {
+                        $operatorQuery->where('name', 'like', $like);
                     });
             });
+        }
+
+        // Status quick-filter chips: resolved / unresolved / lock_override / failed
+        $statusFilter = (string) $request->input('status_filter', 'all');
+        $statusMap = [
+            'resolved'      => 'analysis_resolved',
+            'unresolved'    => 'analysis_unresolved',
+            'lock_override' => 'analysis_lock_override',
+            'failed'        => 'analysis_failed',
+        ];
+        if (isset($statusMap[$statusFilter])) {
+            $query->where('change_type', $statusMap[$statusFilter]);
+        }
+
+        // Source quick-filter chip: Final BOB / IMS / Health Sherpa / Payee Map / Carrier BOB / Lock List / Unresolved
+        $sourceFilter = trim((string) $request->input('source_filter', ''));
+        if ($sourceFilter !== '' && $sourceFilter !== 'all') {
+            $query->where('new_match_source', $sourceFilter);
         }
 
         $this->applyReportSort($query, $request->input('sortModel'), [
@@ -85,6 +111,8 @@ class ContractPatchReportingController extends Controller
             'new_department' => ['new_department'],
             'old_payee_name' => ['old_payee_name'],
             'new_payee_name' => ['new_payee_name'],
+            'new_match_source' => ['new_match_source'],
+            'match_key' => ['match_key'],
             'flag_value' => ['flag_value'],
             'change_type' => ['change_type'],
         ], ['created_at'], 'desc');
@@ -107,6 +135,8 @@ class ContractPatchReportingController extends Controller
                     'new_payee_name' => $log->new_payee_name,
                     'old_match_source' => $log->old_match_source,
                     'new_match_source' => $log->new_match_source,
+                    'match_key' => $log->match_key,
+                    'diagnosis' => $log->diagnosis,
                     'flag_value' => $log->flag_value,
                     'change_type' => $log->change_type,
                     'updated_by_name' => $log->operator?->name ?? 'System',
@@ -274,6 +304,8 @@ class ContractPatchReportingController extends Controller
                 'failed_records' => (int) $batch->failed_records,
                 'skipped_summary' => $batch->skipped_summary ?? [],
                 'failure_summary' => $batch->failure_summary ?? [],
+                'source_distribution' => $this->aggregateSourceDistribution($patchBatchId, null),
+                'status_distribution' => $this->aggregateStatusDistribution($patchBatchId, null),
                 'formatted_date' => optional($batch->created_at)->format('M d, Y h:i A'),
             ];
         }
@@ -330,8 +362,79 @@ class ContractPatchReportingController extends Controller
             'failed_records' => (int) $runs->sum('failed_records'),
             'skipped_summary' => $skippedSummary,
             'failure_summary' => $failureSummary,
+            'source_distribution' => $this->aggregateSourceDistribution(null, $parentBatchId),
+            'status_distribution' => $this->aggregateStatusDistribution(null, $parentBatchId),
             'formatted_date' => optional($latestRun->created_at)->format('M d, Y h:i A'),
         ];
+    }
+
+    /**
+     * Aggregate count of resolutions per source (Final BOB / IMS / HS / Payee Map / Carrier BOB / Lock List / Unresolved / FAILED).
+     * Powers the Source Distribution strip on the Commission Adjustment Details view.
+     */
+    private function aggregateSourceDistribution(?string $patchBatchId, ?string $parentBatchId): array
+    {
+        $query = ContractPatchLog::query()
+            ->selectRaw('new_match_source, COUNT(*) as total')
+            ->groupBy('new_match_source')
+            ->orderByDesc('total');
+
+        if ($patchBatchId) {
+            $query->where('batch_id', $patchBatchId);
+        } elseif ($parentBatchId) {
+            $query->where('parent_batch_id', $parentBatchId);
+        } else {
+            return [];
+        }
+
+        return $query->get()
+            ->map(fn($r) => [
+                'source' => (string) ($r->new_match_source ?: 'Unresolved'),
+                'count'  => (int) $r->total,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Aggregate count of resolutions per cascade status (resolved / unresolved / lock_override / failed).
+     * Powers the status quick-filter chip counts.
+     */
+    private function aggregateStatusDistribution(?string $patchBatchId, ?string $parentBatchId): array
+    {
+        $query = ContractPatchLog::query()
+            ->selectRaw('change_type, COUNT(*) as total')
+            ->groupBy('change_type');
+
+        if ($patchBatchId) {
+            $query->where('batch_id', $patchBatchId);
+        } elseif ($parentBatchId) {
+            $query->where('parent_batch_id', $parentBatchId);
+        } else {
+            return [];
+        }
+
+        $distribution = [
+            'resolved'      => 0,
+            'unresolved'    => 0,
+            'lock_override' => 0,
+            'failed'        => 0,
+        ];
+
+        foreach ($query->get() as $row) {
+            $key = match ((string) $row->change_type) {
+                'analysis_resolved'      => 'resolved',
+                'analysis_unresolved'    => 'unresolved',
+                'analysis_lock_override' => 'lock_override',
+                'analysis_failed'        => 'failed',
+                default                  => null,
+            };
+            if ($key !== null) {
+                $distribution[$key] += (int) $row->total;
+            }
+        }
+
+        return $distribution;
     }
 
     private function applyReportSort(Builder $query, ?string $sortModelJson, array $allowedSorts, array $defaultColumns, string $defaultDirection = 'asc'): void

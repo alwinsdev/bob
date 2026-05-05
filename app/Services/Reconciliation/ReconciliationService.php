@@ -51,7 +51,10 @@ class ReconciliationService
 
             $batch = ImportBatch::create($batchData);
 
-            ProcessImportBatchJob::dispatch($batch);
+            // afterCommit() — without this a fast worker can pick up the job
+            // before the surrounding transaction commits, see no batch row,
+            // and hard-fail with a ModelNotFoundException.
+            ProcessImportBatchJob::dispatch($batch)->afterCommit();
 
             return $batch;
         });
@@ -119,7 +122,7 @@ class ReconciliationService
             $sourceBatch->fill($batchData);
             $sourceBatch->save();
 
-            ProcessImportBatchJob::dispatch($sourceBatch->fresh());
+            ProcessImportBatchJob::dispatch($sourceBatch->fresh())->afterCommit();
 
             \App\Models\ReconciliationAuditLog::create([
                 'transaction_id' => str_pad($sourceBatch->id, 32, '0', STR_PAD_RIGHT),
@@ -232,7 +235,7 @@ class ReconciliationService
             $sourceBatch->fill($batchData);
             $sourceBatch->save();
 
-            ProcessContractPatchJob::dispatch($sourceBatch->fresh());
+            ProcessContractPatchJob::dispatch($sourceBatch->fresh())->afterCommit();
 
             \App\Models\ReconciliationAuditLog::create([
                 'transaction_id' => str_pad($sourceBatch->id, 32, '0', STR_PAD_RIGHT),

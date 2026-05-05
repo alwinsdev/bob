@@ -27,7 +27,9 @@ class ContractPatchService
 
         $batch = ImportBatch::create($batchData);
 
-        ProcessContractPatchJob::dispatch($batch);
+        // afterCommit() — defensive: if a future caller wraps this in a
+        // transaction, the worker won't race the commit and 404 on the batch.
+        ProcessContractPatchJob::dispatch($batch)->afterCommit();
 
         return $batch;
     }

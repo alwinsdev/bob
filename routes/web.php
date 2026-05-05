@@ -191,7 +191,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/contract-patch-ledger/data', [ContractPatchReportingController::class, 'data'])
                 ->name('reporting.contract-patches.data')
-                ->middleware(['throttle:30,1', 'permission:reconciliation.results.view']);
+                // 60/min: AG Grid + status/source filter chips + page-size changes
+                // can fire 4-6 requests per analyst interaction; 30/min was too tight.
+                ->middleware(['throttle:60,1', 'permission:reconciliation.results.view']);
 
             Route::get('/locklist-impact', [CommissionReportingController::class, 'locklistImpact'])
                 ->name('reporting.locklist-impact')

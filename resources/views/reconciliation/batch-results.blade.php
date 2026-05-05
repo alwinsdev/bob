@@ -253,6 +253,8 @@
 
     agGrid.createGrid(document.getElementById('br-grid'), {
         columnDefs: colDefs,
+        // AG Grid v33+ requires explicit theme. 'legacy' keeps existing ag-grid.css.
+        theme: 'legacy',
         rowModelType: 'infinite',
         datasource,
         cacheBlockSize: 100,
